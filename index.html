@@ -76,7 +76,8 @@
   .field{display:flex;flex-direction:column;gap:6px}
   .field label{font-family:var(--mono);font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:var(--bone-dim)}
   .field input{background:var(--ink);color:var(--bone);font-family:var(--serif);font-size:16px;
-    border:1px solid var(--line-strong);border-radius:10px;padding:13px 13px;width:100%}
+    border:1px solid var(--line-strong);border-radius:10px;padding:13px 13px;width:100%;min-width:0;max-width:100%}
+  .field input[type="date"]{-webkit-appearance:none;appearance:none;text-align:left}
   .field input::placeholder{color:var(--bone-faint);font-style:italic}
   .field input:focus-visible{outline:2px solid var(--rust);outline-offset:1px}
 
@@ -102,6 +103,7 @@
     padding:9px 12px;text-align:center}
   .pickprev{display:flex;gap:11px;align-items:center;background:var(--ink);border:1px solid var(--line-strong);
     border-radius:10px;padding:9px}
+  .pickprev[hidden]{display:none}
   .pickprev img{width:40px;height:60px;border-radius:6px;object-fit:cover;flex-shrink:0}
   .pp-t{font-family:var(--serif);font-style:italic;font-size:15px;line-height:1.15}
   .pp-y{font-family:var(--mono);font-size:10px;color:var(--bone-faint);margin-top:3px;letter-spacing:0.08em}
@@ -163,6 +165,22 @@
     border:1px solid var(--line);border-radius:7px;padding:4px 9px;cursor:pointer}
   .clearpred:active{color:var(--bone)}
 
+  .qwho.g{color:var(--bone-dim)}
+
+  /* guests on the rating card */
+  .guests-wrap{margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+  .guests-h{font-family:var(--mono);font-size:10px;letter-spacing:0.16em;text-transform:uppercase;
+    color:var(--bone-dim);margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
+  .guests-h span{color:var(--bone-faint);letter-spacing:0.1em}
+  .guests-empty{font-family:var(--mono);font-size:10.5px;line-height:1.7;color:var(--bone-faint);margin-bottom:10px}
+  .guestrow{display:flex;align-items:center;gap:10px;justify-content:space-between;
+    background:var(--ink);border:1px solid var(--line);border-radius:10px;padding:9px 11px;margin-bottom:8px}
+  .ginfo{display:flex;flex-direction:column;gap:2px;min-width:0}
+  .gnm{font-family:var(--serif);font-style:italic;font-size:15px;color:var(--bone);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .gst{font-family:var(--mono);font-size:9px;letter-spacing:0.06em;color:var(--bone-faint)}
+  .gacts{display:flex;gap:6px;flex-shrink:0}
+  .gadd{width:100%;justify-content:center;display:flex}
+
   .notes-wrap{margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
   .notes-wrap label{font-family:var(--mono);font-size:10px;letter-spacing:0.18em;text-transform:uppercase;
     color:var(--bone-dim);display:block;margin-bottom:8px}
@@ -203,6 +221,7 @@
   .meter span{display:block;height:100%;border-radius:6px}
   .meter span.chad{background:var(--rust)}
   .meter span.joelle{background:var(--gold)}
+  .meter span.guest{background:var(--bone-dim)}
   .pscore .pnum{font-family:var(--mono);font-size:12px;font-weight:600;width:30px;text-align:right}
   .pscore .pnum.none{color:var(--bone-faint);font-weight:400}
   .predline{margin-top:11px;font-family:var(--mono);font-size:10px;letter-spacing:0.04em;color:var(--bone-faint)}
@@ -375,9 +394,10 @@ function disconnectSync(){
   if(!confirm('Stop syncing on this phone? Your films stay saved here, just not shared.')) return;
   saveSyncBox(''); source=data.movies.length?'local':'memory'; render(); toast('Sync turned off');
 }
-function copyLink(link){
-  try{ navigator.clipboard.writeText(link).then(()=>toast('Invite link copied'),()=>prompt('Copy this invite link:',link)); }
-  catch(e){ prompt('Copy this invite link:',link); }
+function copyLink(link,msg){
+  const ok=msg||'Invite link copied';
+  try{ navigator.clipboard.writeText(link).then(()=>toast(ok),()=>prompt('Copy this link:',link)); }
+  catch(e){ prompt('Copy this link:',link); }
 }
 let toastTimer=null;
 function toast(msg){
@@ -403,11 +423,23 @@ function normalize(){
       CATEGORIES.forEach(c=>{ if(typeof r[c.key]!=='number') r[c.key]=0; });
       if(typeof r.notes!=='string') r.notes='';
     });
+    if(!Array.isArray(m.guests)) m.guests=[];
+    m.guests=m.guests.slice(0,3);
+    m.guests.forEach(g=>{
+      if(typeof g.id!=='string') g.id='g'+Math.random().toString(36).slice(2,7);
+      if(typeof g.name!=='string') g.name='';
+      if(!g.ratings||typeof g.ratings!=='object') g.ratings=blankPerson();
+      CATEGORIES.forEach(c=>{ if(typeof g.ratings[c.key]!=='number') g.ratings[c.key]=0; });
+      if(typeof g.ratings.notes!=='string') g.ratings.notes='';
+    });
   });
 }
-function personAvg(m,p){ const r=m.ratings[p]; let sum=0,wsum=0;
+function avgOf(r){ if(!r) return null; let sum=0,wsum=0;
   CATEGORIES.forEach(c=>{ const v=r[c.key]; if(v>0){ const w=c.weight||1; sum+=v*w; wsum+=w; } });
   return wsum?sum/wsum:null; }
+function personAvg(m,p){ return avgOf(m.ratings[p]); }
+function guestAvg(g){ return avgOf(g&&g.ratings); }
+function firstName(n){ return (n||'').trim().split(/\s+/)[0]||''; }
 function combinedAvg(m){ const a=[personAvg(m,'chad'),personAvg(m,'joelle')].filter(x=>x!==null); return a.length?a.reduce((x,y)=>x+y,0)/a.length:null; }
 function fmt(n){ return n===null?'—':(Math.round(n*10)/10).toFixed(1); }
 function esc(s){ return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
@@ -426,6 +458,31 @@ function renameMovie(id){ const m=getMovie(id); if(!m) return;
 function editGenre(id){ const m=getMovie(id); if(!m) return;
   const n=prompt('Genre (e.g. Drama, Sci-Fi, Comedy)', m.genre||''); if(n===null) return;
   m.genre=n.trim(); scheduleSave(); render(); }
+
+/* ---------- guests (per movie, up to 3) ---------- */
+function guestLink(m,g){
+  return location.origin+'/rate.html?box='+encodeURIComponent(syncBox)+'&m='+encodeURIComponent(m.id)+'&gid='+encodeURIComponent(g.id)+(g.name?'&n='+encodeURIComponent(g.name):'');
+}
+async function addGuest(id){
+  const m=getMovie(id); if(!m) return;
+  if(!Array.isArray(m.guests)) m.guests=[];
+  if(m.guests.length>=3){ toast('Up to 3 guests per film'); return; }
+  if(!syncBox){
+    if(!confirm('Guests rate from their own phone, so cross-phone sync needs to be on. Turn it on now?')) return;
+    await enableSync();
+    if(!syncBox){ toast('Could not turn on sync — try again'); return; }
+  }
+  const name=prompt('Guest name (e.g. Ashton)'); if(name===null) return;
+  const g={id:'g'+Date.now().toString(36)+Math.random().toString(36).slice(2,4),name:(name||'').trim(),ratings:blankPerson()};
+  m.guests.push(g); scheduleSave(); render();
+  copyLink(guestLink(m,g),'Guest link copied — send it to '+(g.name||'your guest'));
+}
+function delGuest(id,gid){
+  const m=getMovie(id); if(!m||!Array.isArray(m.guests)) return;
+  const g=m.guests.find(x=>x.id===gid); if(!g) return;
+  if(!confirm(`Remove ${g.name||'this guest'} and their rating?`)) return;
+  m.guests=m.guests.filter(x=>x.id!==gid); scheduleSave(); render();
+}
 function setRating(id,p,cat,v){ const m=getMovie(id); if(!m) return;
   m.ratings[p][cat]=(m.ratings[p][cat]===v)?0:v; scheduleSave(); render(); }
 function setNotes(id,p,text){ const m=getMovie(id); if(!m) return; m.ratings[p].notes=text; scheduleSave(); }
@@ -510,12 +567,30 @@ function personPanel(p){
     ${cats}
     <div class="notes-wrap"><label for="notes-${p}">${PEOPLE[p]}'s notes</label>
       <textarea class="notes" id="notes-${p}" data-person="${p}" placeholder="Best scene, gripes, who picked it…">${esc(r.notes)}</textarea></div>
+    ${guestSectionHTML(m)}
     <div class="card-foot">
       <button class="mini" data-act="rename" data-id="${m.id}">Rename</button>
       <button class="mini" data-act="genre" data-id="${m.id}">Edit genre</button>
       <button class="mini" data-act="cover" data-id="${m.id}">${m.poster?'Change cover':'Add cover'}</button>
       <button class="mini danger" data-act="delete" data-id="${m.id}">Remove film</button>
     </div></div>`;
+}
+function guestSectionHTML(m){
+  const guests=m.guests||[];
+  const rows=guests.map(g=>{
+    const a=guestAvg(g);
+    return `<div class="guestrow">
+      <div class="ginfo"><span class="gnm">${esc(g.name||'Guest')}</span><span class="gst">${a!==null?fmt(a)+'/5':'invite sent · not rated yet'}</span></div>
+      <div class="gacts">
+        <button class="mini" data-act="gcopy" data-link="${esc(guestLink(m,g))}">Copy link</button>
+        <button class="mini danger" data-act="gdel" data-id="${m.id}" data-gid="${g.id}">✕</button>
+      </div></div>`;
+  }).join('');
+  return `<div class="guests-wrap">
+    <div class="guests-h">Movie-night guests <span>${guests.length}/3</span></div>
+    ${rows||'<div class="guests-empty">Having people over? Add up to 3 guests — each gets a private link to rate just this film from their own phone.</div>'}
+    ${guests.length<3?`<button class="mini gadd" data-act="gadd" data-id="${m.id}">＋ Add a guest</button>`:''}
+  </div>`;
 }
 function sharedPanel(){
   if(!data.movies.length) return `<div class="empty"><div class="big">Your shared shelf is empty</div><div class="small">Once you've both rated a film,<br>the combined verdicts land here.</div></div>`+syncToolsHTML()+dataToolsHTML();
@@ -536,14 +611,22 @@ function sharedPanel(){
   const rows=sorted.map(m=>{ const c=personAvg(m,'chad'),j=personAvg(m,'joelle'),cv=combinedAvg(m);
     const cn=m.ratings.chad.notes.trim(),jn=m.ratings.joelle.notes.trim();
     const cp=m.ratings.chad.predictability,jp=m.ratings.joelle.predictability;
+    const ratedGuests=(m.guests||[]).filter(g=>guestAvg(g)!==null);
     const predline=(cp||jp)?`<div class="predline"><span class="pl-k">Predictability</span>${cp?`Chad <b>${PRED_WORDS[cp]}</b>`:''}${cp&&jp?'  ·  ':''}${jp?`Joelle <b>${PRED_WORDS[jp]}</b>`:''}</div>`:'';
-    const notes=(cn||jn)?`<div class="twonotes">${cn?`<div class="qnote"><div class="qwho c">Chad</div><div class="qtext">${esc(cn)}</div></div>`:''}${jn?`<div class="qnote"><div class="qwho j">Joelle</div><div class="qtext">${esc(jn)}</div></div>`:''}</div>`:'';
+    const guestBars=ratedGuests.map(g=>{ const ga=guestAvg(g);
+      return `<div class="pscore"><span class="who" title="${esc(g.name||'Guest')}">${esc(firstName(g.name)||'Guest')}</span><span class="meter"><span class="guest" style="width:${ga/5*100}%"></span></span><span class="pnum">${fmt(ga)}</span></div>`; }).join('');
+    let noteItems=[];
+    if(cn) noteItems.push({who:'Chad',cls:'c',text:cn});
+    if(jn) noteItems.push({who:'Joelle',cls:'j',text:jn});
+    (m.guests||[]).forEach(g=>{ const t=(g.ratings.notes||'').trim(); if(t) noteItems.push({who:g.name||'Guest',cls:'g',text:t}); });
+    const notes=noteItems.length?`<div class="twonotes">${noteItems.map(it=>`<div class="qnote"><div class="qwho ${it.cls}">${esc(it.who)}</div><div class="qtext">${esc(it.text)}</div></div>`).join('')}</div>`:'';
     return `<div class="filmrow"><div class="filmrow-head">${m.poster?posterHTML(m,'frposter',''):''}
       <div class="frmain"><div class="ftitle">${esc(m.title)}</div>${(m.year||m.watched)?`<div class="fdate">${m.year?esc(m.year):''}${m.year&&m.watched?' · ':''}${m.watched?`watched ${esc(m.watched)}`:''}</div>`:''}${m.genre?`<div class="gtags"><span class="gchip">${esc(m.genre)}</span></div>`:''}</div>
       <div class="verdict"><div class="vnum ${cv===null?'empty':''}">${fmt(cv)}</div><div class="vlbl">Shared verdict</div></div></div>
       <div class="scorebars">
         <div class="pscore"><span class="who">Chad</span><span class="meter"><span class="chad" style="width:${c?(c/5*100):0}%"></span></span><span class="pnum ${c===null?'none':''}">${fmt(c)}</span></div>
         <div class="pscore"><span class="who">Joelle</span><span class="meter"><span class="joelle" style="width:${j?(j/5*100):0}%"></span></span><span class="pnum ${j===null?'none':''}">${fmt(j)}</span></div>
+        ${guestBars}
       </div>${predline}${notes}
       <div class="filmrow-foot"><button class="mini" data-act="rate" data-id="${m.id}">Open &amp; rate</button>
         <button class="mini" data-act="rename" data-id="${m.id}">Rename</button>
@@ -724,6 +807,9 @@ function wire(){
   root.querySelectorAll('[data-act="syncoff"]').forEach(b=>b.addEventListener('click',disconnectSync));
   root.querySelectorAll('[data-act="adopt"]').forEach(b=>b.addEventListener('click',()=>adoptSync(prompt('Paste the sync code (or invite link) from your other phone:'))));
   root.querySelectorAll('[data-act="copylink"]').forEach(b=>b.addEventListener('click',()=>copyLink(b.dataset.link)));
+  root.querySelectorAll('[data-act="gadd"]').forEach(b=>b.addEventListener('click',()=>addGuest(b.dataset.id)));
+  root.querySelectorAll('[data-act="gcopy"]').forEach(b=>b.addEventListener('click',()=>copyLink(b.dataset.link,'Guest link copied')));
+  root.querySelectorAll('[data-act="gdel"]').forEach(b=>b.addEventListener('click',()=>delGuest(b.dataset.id,b.dataset.gid)));
   root.querySelectorAll('[data-act="delete"]').forEach(b=>b.addEventListener('click',()=>deleteMovie(b.dataset.id)));
 }
 

@@ -1,5 +1,5 @@
-const CACHE = 'movieclub-v9';
-const SHELL = ['/', '/index.html', '/guide.html', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/icon-180.png'];
+const CACHE = 'movieclub-v10';
+const SHELL = ['/', '/index.html', '/guide.html', '/rate.html', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/icon-180.png'];
 self.addEventListener('install', e => { self.skipWaiting(); e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).catch(()=>{})); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(()=>self.clients.claim())); });
 self.addEventListener('fetch', e => {
