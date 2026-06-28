@@ -1,10 +1,11 @@
 # Movie Club 🎬
 
-A two-person movie rating app for Chad & Joelle. Eleven categories (Plot, Writing, Pacing,
-Acting — Performance, Acting — Casting, Cinematography, Soundtrack, Soundscape, Satisfying
-ending, Predictability, Overall enjoyment), plus notes, plus a shared verdict tab. Add a
-film by typing its title — suggestions and poster art autocomplete in. Built mobile-first
-for iPhone, installable to the home screen, synced across both phones via Cloudflare KV.
+A two-person movie rating app for Chad & Joelle. Thirteen categories (Plot, Writing, Pacing,
+Acting — Performance, Acting — Casting, Cinematography, Special effects, Set design & costumes,
+Soundtrack, Soundscape, Satisfying ending, Predictability, Overall enjoyment), plus a genre
+tag, notes, and a shared verdict tab. Add a film by typing its title — suggestions, genre, and
+poster art autocomplete in. Built mobile-first for iPhone, installable to the home screen,
+synced across both phones via Cloudflare KV.
 
 ## Stack
 - Static `index.html` (no build step) + service worker + web manifest

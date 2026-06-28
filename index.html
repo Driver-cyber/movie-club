@@ -106,6 +106,16 @@
   .pp-t{font-family:var(--serif);font-style:italic;font-size:15px;line-height:1.15}
   .pp-y{font-family:var(--mono);font-size:10px;color:var(--bone-faint);margin-top:3px;letter-spacing:0.08em}
 
+  /* genre tag chip */
+  .gtags{margin-top:9px;display:flex;flex-wrap:wrap;gap:6px}
+  .gchip{display:inline-flex;align-items:center;font-family:var(--mono);font-size:9.5px;font-weight:600;
+    letter-spacing:0.12em;text-transform:uppercase;color:var(--gold);background:rgba(224,178,92,0.10);
+    border:1px solid var(--gold-dim);border-radius:20px;padding:4px 11px;cursor:pointer;line-height:1.4}
+  .gchip.empty{color:var(--bone-faint);background:transparent;border-color:var(--line-strong)}
+  .gchip:active{transform:translateY(1px)}
+  span.gchip{cursor:default}
+  .gchip:focus-visible{outline:2px solid var(--rust);outline-offset:2px}
+
   .panel{display:none;animation:rise .22s ease}
   .panel.active{display:block}
   @keyframes rise{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
@@ -274,6 +284,8 @@ const CATEGORIES=[
   {key:'actingPerformance',  label:'Acting — Performance',desc:'the performances'},
   {key:'actingCasting',      label:'Acting — Casting',   desc:'right people, right roles'},
   {key:'cinematography',     label:'Cinematography',     desc:'shots · lighting · look'},
+  {key:'specialEffects',     label:'Special effects',    desc:'vfx · practical · stunts'},
+  {key:'setCostumes',        label:'Set design & costumes',desc:'production design · wardrobe'},
   {key:'soundtrack',         label:'Soundtrack',         desc:'score · songs'},
   {key:'soundscape',         label:'Soundscape',         desc:'sound design · mix'},
   {key:'ending',             label:'Satisfying ending',  desc:'did it stick the landing'},
@@ -333,6 +345,7 @@ function normalize(){
   data.movies.forEach(m=>{
     if(typeof m.poster!=='string') m.poster='';
     if(typeof m.year!=='string') m.year='';
+    if(typeof m.genre!=='string') m.genre='';
     if(!m.ratings||typeof m.ratings!=='object') m.ratings=blank();
     Object.keys(PEOPLE).forEach(p=>{
       const r=m.ratings[p]||(m.ratings[p]=blankPerson());
@@ -350,7 +363,7 @@ function esc(s){ return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>
 
 /* ---------- mutations ---------- */
 function addMovie(title,date,extra){ const t=(title||'').trim(); if(!t) return;
-  const m={id:uid(),title:t,watched:date||'',year:(extra&&extra.year)||'',poster:(extra&&extra.poster)||'',ratings:blank()};
+  const m={id:uid(),title:t,watched:date||'',year:(extra&&extra.year)||'',genre:(extra&&extra.genre)||'',poster:(extra&&extra.poster)||'',ratings:blank()};
   data.movies.unshift(m); selectedId=m.id; newFormOpen=false; pendingPick=null; scheduleSave(); render(); }
 function deleteMovie(id){ const m=getMovie(id); if(!m) return;
   if(!confirm(`Remove "${m.title}" and both your ratings? This can't be undone.`)) return;
@@ -359,6 +372,9 @@ function deleteMovie(id){ const m=getMovie(id); if(!m) return;
 function renameMovie(id){ const m=getMovie(id); if(!m) return;
   const n=prompt('Movie title',m.title); if(n===null) return; const t=n.trim(); if(!t) return;
   m.title=t; scheduleSave(); render(); }
+function editGenre(id){ const m=getMovie(id); if(!m) return;
+  const n=prompt('Genre (e.g. Drama, Sci-Fi, Comedy)', m.genre||''); if(n===null) return;
+  m.genre=n.trim(); scheduleSave(); render(); }
 function setRating(id,p,cat,v){ const m=getMovie(id); if(!m) return;
   m.ratings[p][cat]=(m.ratings[p][cat]===v)?0:v; scheduleSave(); render(); }
 function setNotes(id,p,text){ const m=getMovie(id); if(!m) return; m.ratings[p].notes=text; scheduleSave(); }
@@ -435,7 +451,8 @@ function personPanel(p){
   return `<div class="card">
     <div class="nowhead">${posterHTML(m,'nowposter','🎬')}
       <div><div class="nowtitle">${esc(m.title)}</div>
-        <div class="nowmeta">${PEOPLE[p]}'s scorecard${avg!==null?`  ·  avg ${fmt(avg)}/5`:''}${m.year?`  ·  ${esc(m.year)}`:''}${m.watched?`  ·  seen ${esc(m.watched)}`:''}</div></div>
+        <div class="nowmeta">${PEOPLE[p]}'s scorecard${avg!==null?`  ·  avg ${fmt(avg)}/5`:''}${m.year?`  ·  ${esc(m.year)}`:''}${m.watched?`  ·  seen ${esc(m.watched)}`:''}</div>
+        <div class="gtags"><button class="gchip ${m.genre?'':'empty'}" data-act="genre" data-id="${m.id}">${m.genre?esc(m.genre):'＋ Genre'}</button></div></div>
     </div>
     ${cats}
     <div class="notes-wrap"><label for="notes-${p}">${PEOPLE[p]}'s notes</label>
@@ -463,7 +480,7 @@ function sharedPanel(){
     const predline=(cp||jp)?`<div class="predline"><span class="pl-k">Predictability</span>${cp?`Chad <b>${PRED_WORDS[cp]}</b>`:''}${cp&&jp?'  ·  ':''}${jp?`Joelle <b>${PRED_WORDS[jp]}</b>`:''}</div>`:'';
     const notes=(cn||jn)?`<div class="twonotes">${cn?`<div class="qnote"><div class="qwho c">Chad</div><div class="qtext">${esc(cn)}</div></div>`:''}${jn?`<div class="qnote"><div class="qwho j">Joelle</div><div class="qtext">${esc(jn)}</div></div>`:''}</div>`:'';
     return `<div class="filmrow"><div class="filmrow-head">${m.poster?posterHTML(m,'frposter',''):''}
-      <div class="frmain"><div class="ftitle">${esc(m.title)}</div>${(m.year||m.watched)?`<div class="fdate">${m.year?esc(m.year):''}${m.year&&m.watched?' · ':''}${m.watched?`watched ${esc(m.watched)}`:''}</div>`:''}</div>
+      <div class="frmain"><div class="ftitle">${esc(m.title)}</div>${(m.year||m.watched)?`<div class="fdate">${m.year?esc(m.year):''}${m.year&&m.watched?' · ':''}${m.watched?`watched ${esc(m.watched)}`:''}</div>`:''}${m.genre?`<div class="gtags"><span class="gchip">${esc(m.genre)}</span></div>`:''}</div>
       <div class="verdict"><div class="vnum ${cv===null?'empty':''}">${fmt(cv)}</div><div class="vlbl">Shared verdict</div></div></div>
       <div class="scorebars">
         <div class="pscore"><span class="who">Chad</span><span class="meter"><span class="chad" style="width:${c?(c/5*100):0}%"></span></span><span class="pnum ${c===null?'none':''}">${fmt(c)}</span></div>
@@ -492,16 +509,17 @@ function renderSuggest(list){
   suggList=list;
   const box=document.getElementById('suggBox'); if(!box) return;
   if(!list.length){ box.innerHTML=`<div class="sugg-hint">No matches — you can still add the title by hand</div>`; box.classList.add('open'); return; }
-  box.innerHTML=list.map((m,i)=>`<button type="button" class="sugg" data-idx="${i}" role="option">
+  box.innerHTML=list.map((m,i)=>{ const meta=[esc(m.year),esc(m.genre)].filter(Boolean).join(' · ');
+    return `<button type="button" class="sugg" data-idx="${i}" role="option">
     ${m.poster?`<img class="sugg-img" src="${esc(m.poster)}" alt="" loading="lazy" />`:`<span class="sugg-img ph">🎞</span>`}
-    <span class="sugg-meta"><span class="sugg-title">${esc(m.title)}</span>${m.year?`<span class="sugg-year">${esc(m.year)}</span>`:''}</span>
-  </button>`).join('');
+    <span class="sugg-meta"><span class="sugg-title">${esc(m.title)}</span>${meta?`<span class="sugg-year">${meta}</span>`:''}</span>
+  </button>`; }).join('');
   box.classList.add('open');
   box.querySelectorAll('.sugg').forEach(b=>b.addEventListener('click',()=>pickSuggest(+b.dataset.idx)));
 }
 function pickSuggest(i){
   const m=suggList[i]; if(!m) return;
-  pendingPick={title:m.title,year:m.year||'',poster:m.poster||''};
+  pendingPick={title:m.title,year:m.year||'',genre:m.genre||'',poster:m.poster||''};
   const nt=document.getElementById('newTitle'); if(nt) nt.value=m.title;
   const box=document.getElementById('suggBox'); if(box){ box.innerHTML=''; box.classList.remove('open'); }
   updatePickPreview();
@@ -510,7 +528,8 @@ function updatePickPreview(){
   const el=document.getElementById('pickPreview'); if(!el) return;
   if(pendingPick&&pendingPick.poster){
     el.hidden=false;
-    el.innerHTML=`<img src="${esc(pendingPick.poster)}" alt="" /><div><div class="pp-t">${esc(pendingPick.title)}</div>${pendingPick.year?`<div class="pp-y">${esc(pendingPick.year)}</div>`:''}</div>`;
+    const meta=[esc(pendingPick.year),esc(pendingPick.genre)].filter(Boolean).join(' · ');
+    el.innerHTML=`<img src="${esc(pendingPick.poster)}" alt="" /><div><div class="pp-t">${esc(pendingPick.title)}</div>${meta?`<div class="pp-y">${meta}</div>`:''}</div>`;
   }else{ el.hidden=true; el.innerHTML=''; }
 }
 function commitNew(){
@@ -553,6 +572,7 @@ function wire(){
   root.querySelectorAll('[data-sort]').forEach(c=>c.addEventListener('click',()=>{sortMode=c.dataset.sort;render();}));
   root.querySelectorAll('[data-act="rate"]').forEach(b=>b.addEventListener('click',()=>{selectedId=b.dataset.id;activeTab='chad';render();window.scrollTo({top:0,behavior:'smooth'});}));
   root.querySelectorAll('[data-act="rename"]').forEach(b=>b.addEventListener('click',()=>renameMovie(b.dataset.id)));
+  root.querySelectorAll('[data-act="genre"]').forEach(b=>b.addEventListener('click',()=>editGenre(b.dataset.id)));
   root.querySelectorAll('[data-act="delete"]').forEach(b=>b.addEventListener('click',()=>deleteMovie(b.dataset.id)));
 }
 
