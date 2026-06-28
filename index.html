@@ -214,6 +214,11 @@
   .verdict .vnum{font-family:var(--serif);font-style:italic;font-weight:600;font-size:30px;color:var(--gold);line-height:1}
   .verdict .vnum.empty{color:var(--bone-faint);font-size:21px}
   .verdict .vlbl{font-family:var(--mono);font-size:8.5px;letter-spacing:0.16em;text-transform:uppercase;color:var(--bone-faint);margin-top:3px}
+  .vtoggle{margin-top:8px;font-family:var(--mono);font-size:8.5px;font-weight:600;letter-spacing:0.04em;
+    color:var(--bone-dim);background:transparent;border:1px solid var(--line-strong);border-radius:14px;
+    padding:5px 10px;cursor:pointer;white-space:nowrap}
+  .vtoggle.on{color:var(--ink);background:var(--gold);border-color:var(--gold)}
+  .vtoggle:active{transform:translateY(1px)}
   .scorebars{display:flex;flex-direction:column;gap:9px;margin-top:13px}
   .pscore{display:flex;align-items:center;gap:9px}
   .pscore .who{font-family:var(--mono);font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--bone-dim);width:46px}
@@ -417,6 +422,7 @@ function normalize(){
     if(typeof m.poster!=='string') m.poster='';
     if(typeof m.year!=='string') m.year='';
     if(typeof m.genre!=='string') m.genre='';
+    if(typeof m.includeGuests!=='boolean') m.includeGuests=false;
     if(!m.ratings||typeof m.ratings!=='object') m.ratings=blank();
     Object.keys(PEOPLE).forEach(p=>{
       const r=m.ratings[p]||(m.ratings[p]=blankPerson());
@@ -440,7 +446,9 @@ function avgOf(r){ if(!r) return null; let sum=0,wsum=0;
 function personAvg(m,p){ return avgOf(m.ratings[p]); }
 function guestAvg(g){ return avgOf(g&&g.ratings); }
 function firstName(n){ return (n||'').trim().split(/\s+/)[0]||''; }
-function combinedAvg(m){ const a=[personAvg(m,'chad'),personAvg(m,'joelle')].filter(x=>x!==null); return a.length?a.reduce((x,y)=>x+y,0)/a.length:null; }
+function combinedAvg(m){ const vals=[personAvg(m,'chad'),personAvg(m,'joelle')];
+  if(m.includeGuests) (m.guests||[]).forEach(g=>vals.push(guestAvg(g)));
+  const a=vals.filter(x=>x!==null); return a.length?a.reduce((x,y)=>x+y,0)/a.length:null; }
 function fmt(n){ return n===null?'—':(Math.round(n*10)/10).toFixed(1); }
 function esc(s){ return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
@@ -458,6 +466,7 @@ function renameMovie(id){ const m=getMovie(id); if(!m) return;
 function editGenre(id){ const m=getMovie(id); if(!m) return;
   const n=prompt('Genre (e.g. Drama, Sci-Fi, Comedy)', m.genre||''); if(n===null) return;
   m.genre=n.trim(); scheduleSave(); render(); }
+function toggleVerdict(id){ const m=getMovie(id); if(!m) return; m.includeGuests=!m.includeGuests; scheduleSave(); render(); }
 
 /* ---------- guests (per movie, up to 3) ---------- */
 function guestLink(m,g){
@@ -622,7 +631,7 @@ function sharedPanel(){
     const notes=noteItems.length?`<div class="twonotes">${noteItems.map(it=>`<div class="qnote"><div class="qwho ${it.cls}">${esc(it.who)}</div><div class="qtext">${esc(it.text)}</div></div>`).join('')}</div>`:'';
     return `<div class="filmrow"><div class="filmrow-head">${m.poster?posterHTML(m,'frposter',''):''}
       <div class="frmain"><div class="ftitle">${esc(m.title)}</div>${(m.year||m.watched)?`<div class="fdate">${m.year?esc(m.year):''}${m.year&&m.watched?' · ':''}${m.watched?`watched ${esc(m.watched)}`:''}</div>`:''}${m.genre?`<div class="gtags"><span class="gchip">${esc(m.genre)}</span></div>`:''}</div>
-      <div class="verdict"><div class="vnum ${cv===null?'empty':''}">${fmt(cv)}</div><div class="vlbl">Shared verdict</div></div></div>
+      <div class="verdict"><div class="vnum ${cv===null?'empty':''}">${fmt(cv)}</div><div class="vlbl">${m.includeGuests?"Everyone's verdict":'Shared verdict'}</div>${ratedGuests.length?`<button class="vtoggle ${m.includeGuests?'on':''}" data-act="vtoggle" data-id="${m.id}">${m.includeGuests?'✓ incl. guests':'＋ include guests'}</button>`:''}</div></div>
       <div class="scorebars">
         <div class="pscore"><span class="who">Chad</span><span class="meter"><span class="chad" style="width:${c?(c/5*100):0}%"></span></span><span class="pnum ${c===null?'none':''}">${fmt(c)}</span></div>
         <div class="pscore"><span class="who">Joelle</span><span class="meter"><span class="joelle" style="width:${j?(j/5*100):0}%"></span></span><span class="pnum ${j===null?'none':''}">${fmt(j)}</span></div>
@@ -810,6 +819,7 @@ function wire(){
   root.querySelectorAll('[data-act="gadd"]').forEach(b=>b.addEventListener('click',()=>addGuest(b.dataset.id)));
   root.querySelectorAll('[data-act="gcopy"]').forEach(b=>b.addEventListener('click',()=>copyLink(b.dataset.link,'Guest link copied')));
   root.querySelectorAll('[data-act="gdel"]').forEach(b=>b.addEventListener('click',()=>delGuest(b.dataset.id,b.dataset.gid)));
+  root.querySelectorAll('[data-act="vtoggle"]').forEach(b=>b.addEventListener('click',()=>toggleVerdict(b.dataset.id)));
   root.querySelectorAll('[data-act="delete"]').forEach(b=>b.addEventListener('click',()=>deleteMovie(b.dataset.id)));
 }
 
