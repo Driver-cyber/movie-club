@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>How Movie Club works</title>
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Movie Club" />
+<meta name="theme-color" content="#181210" />
+<link rel="apple-touch-icon" href="/icon-180.png" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500;1,9..144,600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#181210; --ink-2:#211810; --ink-3:#2b2017; --ink-4:#352819;
+    --bone:#ece0cc; --bone-dim:#a4937c; --bone-faint:#6d6051;
+    --rust:#c25e38; --gold:#e0b25c; --gold-dim:#7a6233;
+    --line:rgba(236,224,204,0.10); --line-strong:rgba(236,224,204,0.18);
+    --mono:'JetBrains Mono',ui-monospace,monospace; --serif:'Fraunces',Georgia,serif;
+    --safe-top:env(safe-area-inset-top,0px); --safe-bottom:env(safe-area-inset-bottom,0px);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+  body{
+    background:
+      radial-gradient(120% 60% at 50% -5%, rgba(194,94,56,0.13), transparent 55%),
+      radial-gradient(90% 55% at 105% 102%, rgba(224,178,92,0.08), transparent 55%),
+      var(--ink);
+    background-attachment:fixed; color:var(--bone); font-family:var(--serif);
+    -webkit-font-smoothing:antialiased; min-height:100dvh; overflow-x:hidden;
+  }
+
+  /* progress + nav */
+  .progress{position:fixed;top:0;left:0;right:0;height:3px;z-index:50;background:transparent}
+  .progress > i{display:block;height:100%;width:100%;transform:scaleX(0);transform-origin:0 50%;
+    background:linear-gradient(90deg,var(--rust),var(--gold));transition:transform .1s linear}
+  .dots{position:fixed;right:14px;top:50%;transform:translateY(-50%);z-index:50;
+    display:flex;flex-direction:column;gap:9px}
+  .dots button{width:9px;height:9px;border-radius:50%;border:1px solid var(--line-strong);
+    background:transparent;cursor:pointer;padding:0;transition:all .2s}
+  .dots button.on{background:var(--gold);border-color:var(--gold);transform:scale(1.25)}
+  @media (max-width:560px){ .dots{right:8px;gap:7px} .dots button{width:7px;height:7px} }
+
+  .top-skip{position:fixed;top:calc(var(--safe-top) + 12px);left:14px;z-index:50;
+    font-family:var(--mono);font-size:10px;letter-spacing:0.12em;text-transform:uppercase;
+    color:var(--bone-dim);text-decoration:none;background:rgba(24,18,14,0.6);backdrop-filter:blur(8px);
+    border:1px solid var(--line);border-radius:20px;padding:7px 13px}
+
+  .wrap{max-width:680px;margin:0 auto;padding:0 20px}
+
+  /* hero */
+  .hero{min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;padding:calc(var(--safe-top) + 40px) 20px 40px}
+  .hero .eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:0.3em;text-transform:uppercase;
+    color:var(--rust);font-weight:500;margin-bottom:14px}
+  .hero h1{font-family:var(--serif);font-style:italic;font-weight:500;
+    font-size:clamp(40px,13vw,68px);line-height:0.96;letter-spacing:-0.01em}
+  .hero p{font-family:var(--mono);font-size:12px;color:var(--bone-dim);letter-spacing:0.06em;
+    margin-top:18px;line-height:1.8;max-width:380px}
+  .scroll-cue{margin-top:46px;font-family:var(--mono);font-size:10px;letter-spacing:0.2em;
+    text-transform:uppercase;color:var(--bone-faint);display:flex;flex-direction:column;align-items:center;gap:10px}
+  .scroll-cue .chev{width:22px;height:22px;border-right:2px solid var(--gold);border-bottom:2px solid var(--gold);
+    transform:rotate(45deg);animation:bob 1.8s ease-in-out infinite}
+  @keyframes bob{0%,100%{transform:rotate(45deg) translate(0,0);opacity:.4}50%{transform:rotate(45deg) translate(4px,4px);opacity:1}}
+
+  /* scenes */
+  .scene{min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    padding:80px 0;gap:26px}
+  .scene .copy{text-align:center;max-width:520px}
+  .num{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:0.2em;color:var(--rust)}
+  .scene h2{font-family:var(--serif);font-style:italic;font-weight:500;font-size:clamp(28px,8vw,42px);
+    line-height:1.04;margin:12px 0 14px}
+  .scene p{font-family:var(--serif);font-size:17px;line-height:1.6;color:var(--bone-dim)}
+  .scene p b{color:var(--bone);font-weight:600}
+  .scene .tip{font-family:var(--mono);font-size:11px;letter-spacing:0.04em;color:var(--bone-faint);
+    margin-top:14px;line-height:1.7}
+
+  /* reveal animation */
+  .reveal{opacity:0;transform:translateY(26px);transition:opacity .7s ease,transform .7s ease}
+  .scene.in .reveal{opacity:1;transform:none}
+  .scene.in .reveal.d1{transition-delay:.08s}
+  .scene.in .reveal.d2{transition-delay:.18s}
+  .scene.in .reveal.d3{transition-delay:.28s}
+  @media (prefers-reduced-motion:reduce){ .reveal{opacity:1;transform:none;transition:none} .scroll-cue .chev{animation:none} html{scroll-behavior:auto} }
+
+  /* phone mock */
+  .phone{width:248px;max-width:80vw;background:linear-gradient(180deg,var(--ink-2),var(--ink));
+    border:1px solid var(--line-strong);border-radius:30px;padding:16px 14px;
+    box-shadow:0 40px 80px -36px rgba(0,0,0,0.95);position:relative}
+  .phone .notch{width:90px;height:5px;border-radius:5px;background:var(--ink-4);margin:0 auto 14px}
+  .m-eyebrow{font-family:var(--mono);font-size:8px;letter-spacing:0.24em;text-transform:uppercase;color:var(--rust);text-align:center}
+  .m-title{font-family:var(--serif);font-style:italic;font-size:26px;text-align:center;line-height:1;margin:5px 0 14px}
+
+  .m-marquee{background:linear-gradient(180deg,var(--ink-3),var(--ink-2));border:1px solid var(--line-strong);
+    border-radius:11px;padding:11px}
+  .m-lbl{font-family:var(--mono);font-size:7.5px;letter-spacing:0.2em;text-transform:uppercase;color:var(--gold);display:block;margin-bottom:7px}
+  .m-input{display:flex;gap:7px}
+  .m-input .box{flex:1;background:var(--ink);border:1px solid var(--line-strong);border-radius:8px;
+    padding:9px 10px;font-family:var(--serif);font-style:italic;font-size:13px;color:var(--bone)}
+  .m-input .box .car{display:inline-block;width:1px;height:13px;background:var(--gold);vertical-align:-2px;margin-left:1px;animation:blink 1s step-end infinite}
+  @keyframes blink{50%{opacity:0}}
+  .m-input .plus{width:34px;border-radius:8px;background:var(--rust);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px}
+
+  .m-drop{margin-top:8px;background:var(--ink-3);border:1px solid var(--line-strong);border-radius:9px;overflow:hidden}
+  .m-sugg{display:flex;align-items:center;gap:9px;padding:7px 9px;border-bottom:1px solid var(--line);
+    opacity:0;transform:translateY(6px);transition:opacity .5s,transform .5s}
+  .scene.in .m-sugg{opacity:1;transform:none}
+  .scene.in .m-sugg:nth-child(1){transition-delay:.35s}
+  .scene.in .m-sugg:nth-child(2){transition-delay:.5s}
+  .scene.in .m-sugg:nth-child(3){transition-delay:.65s}
+  .m-sugg:last-child{border-bottom:none}
+  .m-poster{width:26px;height:38px;border-radius:4px;flex-shrink:0;
+    background:linear-gradient(150deg,var(--gold-dim),var(--rust));display:flex;align-items:center;justify-content:center;font-size:12px}
+  .m-sname{font-family:var(--serif);font-style:italic;font-size:13px;line-height:1.1}
+  .m-syear{font-family:var(--mono);font-size:8px;color:var(--bone-faint);letter-spacing:0.06em;margin-top:2px}
+
+  /* stars mock */
+  .m-card{background:linear-gradient(180deg,var(--ink-2),var(--ink));border:1px solid var(--line);border-radius:13px;padding:14px}
+  .m-cat{padding:9px 0;border-top:1px solid var(--line)}
+  .m-cat:first-child{border-top:none;padding-top:0}
+  .m-cn{font-family:var(--serif);font-weight:600;font-size:15px;margin-bottom:5px}
+  .m-stars{font-size:21px;letter-spacing:3px;color:var(--ink-4);-webkit-text-stroke:1.2px var(--gold-dim)}
+  .m-stars b{color:var(--gold);-webkit-text-stroke:0;font-weight:400;
+    opacity:0;transition:opacity .4s}
+  .scene.in .m-stars b{opacity:1}
+  .scene.in .m-stars b:nth-child(1){transition-delay:.3s}
+  .scene.in .m-stars b:nth-child(2){transition-delay:.42s}
+  .scene.in .m-stars b:nth-child(3){transition-delay:.54s}
+  .scene.in .m-stars b:nth-child(4){transition-delay:.66s}
+
+  /* slider mock */
+  .m-slabels{display:flex;justify-content:space-between;font-family:var(--mono);font-size:8px;
+    letter-spacing:0.08em;text-transform:uppercase;color:var(--bone-faint);margin-bottom:6px}
+  .m-track{height:6px;border-radius:6px;background:linear-gradient(90deg,var(--rust),var(--gold));position:relative}
+  .m-thumb{position:absolute;top:50%;width:18px;height:18px;border-radius:50%;background:var(--bone);
+    border:2px solid var(--ink);transform:translate(-50%,-50%);left:32%;transition:left 1s cubic-bezier(.5,0,.2,1)}
+  .scene.in .m-thumb{left:74%}
+  .m-read{text-align:center;font-family:var(--mono);font-size:10px;color:var(--gold);margin-top:9px;font-weight:600}
+
+  /* tabbar mock */
+  .m-tabs{display:flex;border-top:1px solid var(--line-strong);margin-top:12px;padding-top:9px}
+  .m-tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;
+    font-family:var(--mono);font-size:8px;letter-spacing:0.08em;text-transform:uppercase;color:var(--bone-faint)}
+  .m-tab .g{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--line-strong);
+    display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-style:italic;font-size:11px}
+  .m-tab.c{color:var(--bone)} .m-tab.c .g{border-color:var(--rust);color:var(--rust);background:rgba(194,94,56,0.14)}
+  .m-tab.j .g{border-color:var(--gold);color:var(--gold)}
+  .m-tab.s .g{border-color:var(--bone);color:var(--bone)}
+
+  /* shared verdict mock */
+  .m-vhead{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+  .m-ft{font-family:var(--serif);font-style:italic;font-size:16px}
+  .m-fd{font-family:var(--mono);font-size:7.5px;letter-spacing:0.08em;text-transform:uppercase;color:var(--bone-faint);margin-top:3px}
+  .m-vnum{font-family:var(--serif);font-style:italic;font-weight:600;font-size:26px;color:var(--gold);line-height:1}
+  .m-vlbl{font-family:var(--mono);font-size:7px;letter-spacing:0.14em;text-transform:uppercase;color:var(--bone-faint);text-align:right;margin-top:2px}
+  .m-bar{display:flex;align-items:center;gap:7px;margin-top:9px}
+  .m-bar .who{font-family:var(--mono);font-size:8px;letter-spacing:0.08em;text-transform:uppercase;color:var(--bone-dim);width:38px}
+  .m-meter{flex:1;height:6px;border-radius:6px;background:var(--ink-4);overflow:hidden}
+  .m-meter > i{display:block;height:100%;border-radius:6px;width:0;transition:width 1s ease .3s}
+  .scene.in .m-meter > i{width:var(--w)}
+  .m-meter .chad{background:var(--rust)} .m-meter .joelle{background:var(--gold)}
+  .m-pn{font-family:var(--mono);font-size:9px;font-weight:600;width:22px;text-align:right}
+  .m-chip{display:inline-flex;font-family:var(--mono);font-size:8px;font-weight:600;letter-spacing:0.12em;
+    text-transform:uppercase;color:var(--gold);background:rgba(224,178,92,0.10);border:1px solid var(--gold-dim);
+    border-radius:20px;padding:3px 9px;margin-top:10px}
+
+  /* sync mock */
+  .m-sync{background:linear-gradient(180deg,var(--ink-3),var(--ink-2));border:1px solid var(--line-strong);border-radius:11px;padding:13px;text-align:center}
+  .m-sync .h{font-family:var(--mono);font-size:8px;letter-spacing:0.16em;text-transform:uppercase;color:var(--gold);margin-bottom:7px}
+  .m-sync .p{font-family:var(--serif);font-size:12.5px;color:var(--bone-dim);line-height:1.45;margin-bottom:11px}
+  .m-btn{font-family:var(--mono);font-size:10px;font-weight:600;background:var(--rust);color:#fff;
+    border-radius:9px;padding:10px;letter-spacing:0.04em}
+  .m-code{font-family:var(--mono);font-size:10px;color:var(--bone);background:var(--ink);
+    border:1px dashed var(--line-strong);border-radius:8px;padding:8px;margin-bottom:9px;letter-spacing:0.05em}
+
+  /* two phones */
+  .duo{display:flex;align-items:center;justify-content:center;gap:6px}
+  .duo .mini{width:104px;flex-shrink:0;background:linear-gradient(180deg,var(--ink-2),var(--ink));
+    border:1px solid var(--line-strong);border-radius:18px;padding:11px 9px;text-align:center}
+  .duo .mini .notch{width:40px;height:4px;border-radius:4px;background:var(--ink-4);margin:0 auto 9px}
+  .duo .mini .who{font-family:var(--mono);font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:var(--bone-dim);margin-bottom:8px}
+  .duo .mini .scr{font-family:var(--serif);font-style:italic;font-size:11px;color:var(--bone);line-height:1.5}
+  .duo .link{display:flex;flex-direction:column;align-items:center;gap:5px;color:var(--gold)}
+  .duo .link .ico{font-size:17px}
+  .duo .link .lz{font-family:var(--mono);font-size:7px;letter-spacing:0.1em;text-transform:uppercase;color:var(--bone-faint);white-space:nowrap}
+  .duo .link svg{width:34px;height:14px}
+  .dash{stroke-dasharray:4 4;animation:flow 1s linear infinite}
+  @keyframes flow{to{stroke-dashoffset:-16}}
+
+  /* outro / steps recap */
+  .m-step{display:flex;gap:11px;align-items:flex-start;text-align:left;margin:0 auto;max-width:340px;padding:9px 0}
+  .m-step .n{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--ink);background:var(--gold);
+    width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .m-step .t{font-family:var(--serif);font-size:14.5px;color:var(--bone-dim);line-height:1.45}
+  .m-step .t b{color:var(--bone)}
+
+  .cta{display:inline-block;font-family:var(--mono);font-size:13px;font-weight:600;letter-spacing:0.04em;
+    background:var(--rust);color:#fff;text-decoration:none;border-radius:13px;padding:16px 30px;
+    box-shadow:0 18px 40px -22px var(--rust)}
+  .cta.ghost{background:transparent;color:var(--bone-dim);border:1px solid var(--line-strong);box-shadow:none;margin-top:12px;font-size:11px;padding:12px 22px}
+  .footnote{font-family:var(--mono);font-size:10px;color:var(--bone-faint);letter-spacing:0.05em;line-height:1.8;margin-top:30px}
+</style>
+</head>
+<body>
+<div class="progress"><i id="bar"></i></div>
+<a class="top-skip" href="/">✕ Close</a>
+<nav class="dots" id="dots" aria-label="Jump to section"></nav>
+
+<header class="hero" id="s-hero">
+  <div class="eyebrow reveal">The Stewart Screening Room</div>
+  <h1 class="reveal d1">How<br>Movie&nbsp;Club<br>works</h1>
+  <p class="reveal d2">A two-minute scroll through rating films together, sharing across both your phones, and keeping your ratings safe.</p>
+  <div class="scroll-cue reveal d3">Scroll<div class="chev"></div></div>
+</header>
+
+<main>
+  <!-- 1. Add a film -->
+  <section class="scene" data-label="Add">
+    <div class="phone reveal">
+      <div class="notch"></div>
+      <div class="m-eyebrow">Now rating</div>
+      <div class="m-title">Movie Club</div>
+      <div class="m-marquee">
+        <span class="m-lbl">Now rating</span>
+        <div class="m-input"><div class="box">The Holdo<span class="car"></span></div><div class="plus">＋</div></div>
+        <div class="m-drop">
+          <div class="m-sugg"><div class="m-poster">🎞</div><div><div class="m-sname">The Holdovers</div><div class="m-syear">2023 · Comedy</div></div></div>
+          <div class="m-sugg"><div class="m-poster">🎞</div><div><div class="m-sname">Holiday</div><div class="m-syear">1938 · Romance</div></div></div>
+          <div class="m-sugg"><div class="m-poster">🎞</div><div><div class="m-sname">The Hold Up</div><div class="m-syear">2024 · Action</div></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="copy">
+      <div class="num reveal">01</div>
+      <h2 class="reveal d1">Start typing a title</h2>
+      <p class="reveal d2">Tap <b>＋</b> and type. Real films pop up as you go — pick one and its <b>poster, year, and genre</b> fill themselves in automatically.</p>
+      <div class="tip reveal d3">Can't find it? Type the title by hand, then use<br><b>Upload cover image</b> to add your own art.</div>
+    </div>
+  </section>
+
+  <!-- 2. Rate it -->
+  <section class="scene" data-label="Rate">
+    <div class="phone reveal">
+      <div class="notch"></div>
+      <div class="m-card">
+        <div class="m-cat"><div class="m-cn">Plot</div><div class="m-stars">★★★★★</div></div>
+        <div class="m-cat"><div class="m-cn">Cinematography</div><div class="m-stars"><b>★</b><b>★</b><b>★</b><b>★</b>★</div></div>
+        <div class="m-cat"><div class="m-cn">Soundtrack</div><div class="m-stars"><b>★</b><b>★</b><b>★</b>★★</div></div>
+      </div>
+    </div>
+    <div class="copy">
+      <div class="num reveal">02</div>
+      <h2 class="reveal d1">Rate it, your way</h2>
+      <p class="reveal d2">Score each film across <b>13 categories</b> — Plot, Writing, Pacing, Acting, Cinematography, Special effects, Set &amp; costumes, Soundtrack, and more — from one to five stars.</p>
+      <div class="tip reveal d3">Tapped one star too many? Tap a lit star again to clear it.</div>
+    </div>
+  </section>
+
+  <!-- 3. Predictability -->
+  <section class="scene" data-label="Twist">
+    <div class="phone reveal">
+      <div class="notch"></div>
+      <div class="m-card">
+        <div class="m-cn" style="margin-bottom:9px">Predictability</div>
+        <div class="m-slabels"><span>Predictable</span><span>Shocking</span></div>
+        <div class="m-track"><div class="m-thumb"></div></div>
+        <div class="m-read">Genuinely shocking</div>
+      </div>
+    </div>
+    <div class="copy">
+      <div class="num reveal">03</div>
+      <h2 class="reveal d1">Slide for the twist</h2>
+      <p class="reveal d2">One category is a slider instead of stars: <b>Predictability</b>, from “saw it coming” to “genuinely shocking.”</p>
+      <div class="tip reveal d3">It nudges the final verdict a little —<br>predictable pulls down, shocking lifts up — but only counts half as much as the rest.</div>
+    </div>
+  </section>
+
+  <!-- 4. Two scorecards -->
+  <section class="scene" data-label="Both">
+    <div class="phone reveal">
+      <div class="notch"></div>
+      <div class="m-title" style="font-size:18px;margin-bottom:10px">Two scorecards</div>
+      <div class="m-card" style="text-align:center;font-family:var(--serif);font-style:italic;color:var(--bone-dim);font-size:13px;padding:18px">
+        Chad rates on his tab.<br>Joelle rates on hers.<br>Nobody sees the other's stars<br>until the Shared tab.
+      </div>
+      <div class="m-tabs">
+        <div class="m-tab c"><div class="g">C</div>Chad</div>
+        <div class="m-tab j"><div class="g">J</div>Joelle</div>
+        <div class="m-tab s"><div class="g">★</div>Shared</div>
+      </div>
+    </div>
+    <div class="copy">
+      <div class="num reveal">04</div>
+      <h2 class="reveal d1">One each, no peeking</h2>
+      <p class="reveal d2">The bottom tabs switch between <b>Chad</b>, <b>Joelle</b>, and <b>Shared</b>. You each keep your own scorecard and notes for every film.</p>
+    </div>
+  </section>
+
+  <!-- 5. Shared verdict -->
+  <section class="scene" data-label="Verdict">
+    <div class="phone reveal">
+      <div class="notch"></div>
+      <div class="m-card">
+        <div class="m-vhead">
+          <div><div class="m-ft">The Holdovers</div><div class="m-fd">2023 · watched Jun 1</div></div>
+          <div><div class="m-vnum">4.3</div><div class="m-vlbl">Shared verdict</div></div>
+        </div>
+        <div class="m-bar"><span class="who">Chad</span><span class="m-meter"><i class="chad" style="--w:84%"></i></span><span class="m-pn">4.2</span></div>
+        <div class="m-bar"><span class="who">Joelle</span><span class="m-meter"><i class="joelle" style="--w:88%"></i></span><span class="m-pn">4.4</span></div>
+        <span class="m-chip">Comedy</span>
+      </div>
+    </div>
+    <div class="copy">
+      <div class="num reveal">05</div>
+      <h2 class="reveal d1">The shared verdict</h2>
+      <p class="reveal d2">The <b>Shared</b> tab blends your scores into one verdict, shows each of your averages, and reveals both sets of notes. Sort by <b>most recent</b> or <b>top rated</b>.</p>
+      <div class="tip reveal d3">It even flags your <b>biggest split</b> — the film you two disagreed on most.</div>
+    </div>
+  </section>
+
+  <!-- 6. Turn on sync -->
+  <section class="scene" data-label="Sync">
+    <div class="phone reveal">
+      <div class="notch"></div>
+      <div class="m-sync">
+        <div class="h">Share with your other phone</div>
+        <div class="p">Turn on sync here, then open the invite link on your partner's phone. No account, no setup.</div>
+        <div class="m-btn">Turn on cross-phone sync</div>
+      </div>
+    </div>
+    <div class="copy">
+      <div class="num reveal">06</div>
+      <h2 class="reveal d1">Link your two phones</h2>
+      <p class="reveal d2">On the <b>Shared</b> tab, tap <b>Turn on cross-phone sync</b>. The app quietly sets up a shared list for the two of you — <b>no accounts, no logins, nothing to install</b>.</p>
+    </div>
+  </section>
+
+  <!-- 7. Add the second phone -->
+  <section class="scene" data-label="Invite">
+    <div class="duo reveal">
+      <div class="mini">
+        <div class="notch"></div>
+        <div class="who">Chad</div>
+        <div class="m-code">movieclub.link/ab7f…</div>
+        <div class="scr">Copy invite link →</div>
+      </div>
+      <div class="link">
+        <span class="ico">🔗</span>
+        <svg viewBox="0 0 34 14"><line class="dash" x1="1" y1="7" x2="33" y2="7" stroke="var(--gold)" stroke-width="2"/></svg>
+        <span class="lz">shared list</span>
+      </div>
+      <div class="mini">
+        <div class="notch"></div>
+        <div class="who">Joelle</div>
+        <div class="scr" style="color:var(--gold)">✓ Synced<br>for both<br>of you</div>
+      </div>
+    </div>
+    <div class="copy">
+      <div class="num reveal">07</div>
+      <h2 class="reveal d1">Send the invite</h2>
+      <p class="reveal d2">Tap <b>Copy invite link</b> and text it to each other. Open it on the second phone — that's it. <b>Both phones now share one list</b>, updating whenever you reopen the app.</p>
+      <div class="tip reveal d3">No link handy? Use <b>Enter a code</b> and type<br>the short code shown on the first phone.</div>
+    </div>
+  </section>
+
+  <!-- 8. Backups -->
+  <section class="scene" data-label="Backup">
+    <div class="phone reveal">
+      <div class="notch"></div>
+      <div class="m-title" style="font-size:16px;margin-bottom:12px">Your data, safe</div>
+      <div class="m-sync" style="margin-bottom:9px">
+        <div class="m-btn" style="background:transparent;border:1px solid var(--line-strong);color:var(--bone)">⤓ Export data (.json)</div>
+      </div>
+      <div class="m-sync">
+        <div class="m-btn" style="background:transparent;border:1px solid var(--line-strong);color:var(--bone)">⤒ Import data</div>
+      </div>
+    </div>
+    <div class="copy">
+      <div class="num reveal">08</div>
+      <h2 class="reveal d1">Never lose a rating</h2>
+      <p class="reveal d2">Every phone keeps its own copy, and <b>Export data</b> saves a backup file you can stash anywhere. <b>Import</b> brings it back — even into future versions of the app.</p>
+      <div class="tip reveal d3">A quick Export now and then is a nice safety net.</div>
+    </div>
+  </section>
+
+  <!-- 9. Add to home screen -->
+  <section class="scene" data-label="Install">
+    <div class="phone reveal">
+      <div class="notch"></div>
+      <div class="m-card" style="text-align:center;padding:20px 14px">
+        <div style="font-size:30px;margin-bottom:12px">📲</div>
+        <div style="font-family:var(--mono);font-size:11px;color:var(--bone-dim);line-height:1.9;letter-spacing:0.04em">
+          Safari<br><b style="color:var(--bone)">Share</b> ⎙<br>↓<br><b style="color:var(--bone)">Add to Home Screen</b>
+        </div>
+      </div>
+    </div>
+    <div class="copy">
+      <div class="num reveal">09</div>
+      <h2 class="reveal d1">Put it on your home screen</h2>
+      <p class="reveal d2">In Safari, tap <b>Share</b> then <b>Add to Home Screen</b>. Movie Club opens full-screen like a real app — no browser bars.</p>
+    </div>
+  </section>
+
+  <!-- Outro -->
+  <section class="scene" data-label="Go" id="s-outro">
+    <div class="copy">
+      <div class="num reveal">That's the whole thing</div>
+      <h2 class="reveal d1">Now go log<br>a movie 🍿</h2>
+      <div class="reveal d2" style="margin:22px 0 6px">
+        <div class="m-step"><span class="n">1</span><span class="t"><b>Add</b> a film and pick it from the list</span></div>
+        <div class="m-step"><span class="n">2</span><span class="t"><b>Rate</b> it on your tab; have your partner rate on theirs</span></div>
+        <div class="m-step"><span class="n">3</span><span class="t"><b>Turn on sync</b> and share the invite link once</span></div>
+        <div class="m-step"><span class="n">4</span><span class="t">Check the <b>Shared</b> tab for your combined verdict</span></div>
+      </div>
+      <div class="reveal d3" style="margin-top:26px">
+        <a class="cta" href="/">Open Movie Club</a><br>
+        <a class="cta ghost" href="#s-hero">Replay the guide</a>
+      </div>
+      <div class="footnote reveal d3">The Stewart Screening Room · Chad + Joelle</div>
+    </div>
+  </section>
+</main>
+
+<script>
+(function(){
+  var scenes=[].slice.call(document.querySelectorAll('.scene'));
+  var bar=document.getElementById('bar');
+  var dotsNav=document.getElementById('dots');
+
+  /* build dots (hero + each scene) */
+  var targets=[document.getElementById('s-hero')].concat(scenes);
+  targets.forEach(function(t,i){
+    var b=document.createElement('button');
+    b.setAttribute('aria-label', t.dataset.label || 'Intro');
+    b.addEventListener('click',function(){ t.scrollIntoView({behavior:'smooth'}); });
+    dotsNav.appendChild(b);
+  });
+  var dots=[].slice.call(dotsNav.children);
+
+  /* reveal scenes + track active for dots */
+  var io=new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if(e.isIntersecting){
+        e.target.classList.add('in');
+        var idx=targets.indexOf(e.target);
+        if(idx>-1){ dots.forEach(function(d,i){ d.classList.toggle('on', i===idx); }); }
+      }
+    });
+  },{threshold:0.45});
+  targets.forEach(function(t){ io.observe(t); });
+
+  /* progress bar */
+  function onScroll(){
+    var h=document.documentElement;
+    var max=h.scrollHeight-h.clientHeight;
+    var p=max>0 ? h.scrollTop/max : 0;
+    bar.style.transform='scaleX('+p+')';
+  }
+  addEventListener('scroll',onScroll,{passive:true});
+  onScroll();
+})();
+</script>
+</body>
+</html>

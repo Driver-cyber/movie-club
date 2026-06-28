@@ -239,6 +239,10 @@
 
   .syncline{text-align:center;margin-top:20px;font-family:var(--mono);font-size:9.5px;
     letter-spacing:0.14em;text-transform:uppercase;color:var(--bone-faint)}
+  .guideline{text-align:center;margin-top:11px}
+  .guidelink{font-family:var(--mono);font-size:10px;letter-spacing:0.1em;color:var(--bone-dim);
+    text-decoration:none;border:1px solid var(--line);border-radius:20px;padding:8px 15px;display:inline-block}
+  .guidelink:active{color:var(--bone)}
 
   /* bottom tab bar */
   .tabbar{position:fixed;left:0;right:0;bottom:0;z-index:20;
@@ -459,6 +463,7 @@ function render(){
     <section class="panel ${activeTab==='joelle'?'active':''}">${personPanel('joelle')}</section>
     <section class="panel ${activeTab==='shared'?'active':''}">${sharedPanel()}</section>
     <div class="syncline">${source==='server'?'Synced for both of you':source==='local'?'Saved on this iPhone':'Preview · not yet synced'}</div>
+    <div class="guideline"><a class="guidelink" href="/guide.html">❓ How to use Movie Club</a></div>
     <nav class="tabbar"><div class="tabbar-inner">
       <button class="tabbtn ${activeTab==='chad'?'active':''}" data-tab="chad"><span class="glyph">C</span>Chad</button>
       <button class="tabbtn ${activeTab==='joelle'?'active':''}" data-tab="joelle"><span class="glyph">J</span>Joelle</button>
