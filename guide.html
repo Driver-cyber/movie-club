@@ -70,8 +70,8 @@
 
   /* scenes */
   .scene{min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;
-    padding:80px 0;gap:26px}
-  .scene .copy{text-align:center;max-width:520px}
+    padding:80px 26px;gap:26px}
+  .scene .copy{text-align:center;max-width:480px}
   .num{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:0.2em;color:var(--rust)}
   .scene h2{font-family:var(--serif);font-style:italic;font-weight:500;font-size:clamp(28px,8vw,42px);
     line-height:1.04;margin:12px 0 14px}
@@ -185,6 +185,7 @@
   .duo .mini .notch{width:40px;height:4px;border-radius:4px;background:var(--ink-4);margin:0 auto 9px}
   .duo .mini .who{font-family:var(--mono);font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:var(--bone-dim);margin-bottom:8px}
   .duo .mini .scr{font-family:var(--serif);font-style:italic;font-size:11px;color:var(--bone);line-height:1.5}
+  .duo .m-code{font-size:10px;padding:7px 4px;margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .duo .link{display:flex;flex-direction:column;align-items:center;gap:5px;color:var(--gold)}
   .duo .link .ico{font-size:17px}
   .duo .link .lz{font-family:var(--mono);font-size:7px;letter-spacing:0.1em;text-transform:uppercase;color:var(--bone-faint);white-space:nowrap}
@@ -249,7 +250,7 @@
     <div class="phone reveal">
       <div class="notch"></div>
       <div class="m-card">
-        <div class="m-cat"><div class="m-cn">Plot</div><div class="m-stars">★★★★★</div></div>
+        <div class="m-cat"><div class="m-cn">Plot</div><div class="m-stars"><b>★</b><b>★</b><b>★</b><b>★</b><b>★</b></div></div>
         <div class="m-cat"><div class="m-cn">Cinematography</div><div class="m-stars"><b>★</b><b>★</b><b>★</b><b>★</b>★</div></div>
         <div class="m-cat"><div class="m-cn">Soundtrack</div><div class="m-stars"><b>★</b><b>★</b><b>★</b>★★</div></div>
       </div>
@@ -347,7 +348,7 @@
       <div class="mini">
         <div class="notch"></div>
         <div class="who">Chad</div>
-        <div class="m-code">movieclub.link/ab7f…</div>
+        <div class="m-code">ab7f-9c2d</div>
         <div class="scr">Copy invite link →</div>
       </div>
       <div class="link">
