@@ -224,6 +224,10 @@
   .empty .big{font-family:var(--serif);font-style:italic;font-size:23px;color:var(--bone);margin-bottom:9px}
   .empty .small{font-family:var(--mono);font-size:12px;letter-spacing:0.05em;line-height:1.7}
 
+  .datatools{display:flex;gap:8px;margin-top:20px;justify-content:center;flex-wrap:wrap}
+  .datahint{text-align:center;font-family:var(--mono);font-size:9.5px;letter-spacing:0.06em;
+    color:var(--bone-faint);margin-top:9px;line-height:1.6;padding:0 12px}
+
   .syncline{text-align:center;margin-top:20px;font-family:var(--mono);font-size:9.5px;
     letter-spacing:0.14em;text-transform:uppercase;color:var(--bone-faint)}
 
@@ -278,6 +282,7 @@
 const API='/api/data';
 const SEARCH='/api/search';
 const LKEY='movieclub:data';
+const SCHEMA_VERSION=1;   // bump when the data shape changes; import normalizes forward
 const CATEGORIES=[
   {key:'plot',               label:'Plot',               desc:'story · structure'},
   {key:'writing',            label:'Writing',            desc:'script · dialogue'},
@@ -303,7 +308,7 @@ const PRED_WORDS=['Not rated','Totally predictable','Predictable','Even odds','S
 let data={movies:[]};
 let selectedId=null, activeTab='chad', sortMode='recent', newFormOpen=false;
 let saveTimer=null, source='memory';
-let suggTimer=null, suggList=[], pendingPick=null;
+let suggTimer=null, suggList=[], pendingPick=null, pendingCover=null;
 
 /* ---------- storage ---------- */
 function mirrorLocal(){ try{ localStorage.setItem(LKEY, JSON.stringify(data)); }catch(e){} }
@@ -365,7 +370,7 @@ function esc(s){ return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>
 /* ---------- mutations ---------- */
 function addMovie(title,date,extra){ const t=(title||'').trim(); if(!t) return;
   const m={id:uid(),title:t,watched:date||'',year:(extra&&extra.year)||'',genre:(extra&&extra.genre)||'',poster:(extra&&extra.poster)||'',ratings:blank()};
-  data.movies.unshift(m); selectedId=m.id; newFormOpen=false; pendingPick=null; scheduleSave(); render(); }
+  data.movies.unshift(m); selectedId=m.id; newFormOpen=false; pendingPick=null; pendingCover=null; scheduleSave(); render(); }
 function deleteMovie(id){ const m=getMovie(id); if(!m) return;
   if(!confirm(`Remove "${m.title}" and both your ratings? This can't be undone.`)) return;
   data.movies=data.movies.filter(x=>x.id!==id);
@@ -404,6 +409,7 @@ function render(){
           </div>
         </div>
         <div id="pickPreview" class="pickprev" hidden></div>
+        <button class="btn" id="uploadCover" type="button" style="min-height:44px">⤒ Upload cover image (optional)</button>
         <div class="field"><label>Watched on (optional)</label><input id="newDate" type="date" /></div>
         <button class="btn btn-add" id="saveNew" style="min-height:50px">Add film</button>
       </div>
@@ -461,11 +467,12 @@ function personPanel(p){
     <div class="card-foot">
       <button class="mini" data-act="rename" data-id="${m.id}">Rename</button>
       <button class="mini" data-act="genre" data-id="${m.id}">Edit genre</button>
+      <button class="mini" data-act="cover" data-id="${m.id}">${m.poster?'Change cover':'Add cover'}</button>
       <button class="mini danger" data-act="delete" data-id="${m.id}">Remove film</button>
     </div></div>`;
 }
 function sharedPanel(){
-  if(!data.movies.length) return `<div class="empty"><div class="big">Your shared shelf is empty</div><div class="small">Once you've both rated a film,<br>the combined verdicts land here.</div></div>`;
+  if(!data.movies.length) return `<div class="empty"><div class="big">Your shared shelf is empty</div><div class="small">Once you've both rated a film,<br>the combined verdicts land here.</div></div>`+dataToolsHTML();
   const rated=data.movies.filter(m=>combinedAvg(m)!==null);
   let top=null,split=null,gap=-1;
   rated.forEach(m=>{ if(!top||combinedAvg(m)>combinedAvg(top)) top=m;
@@ -495,7 +502,7 @@ function sharedPanel(){
       <div class="filmrow-foot"><button class="mini" data-act="rate" data-id="${m.id}">Open &amp; rate</button>
         <button class="mini" data-act="rename" data-id="${m.id}">Rename</button>
         <button class="mini danger" data-act="delete" data-id="${m.id}">Remove</button></div></div>`; }).join('');
-  return stats+sorts+rows;
+  return stats+sorts+rows+dataToolsHTML();
 }
 
 /* ---------- title search / autocomplete ---------- */
@@ -537,17 +544,74 @@ function pickSuggest(i){
 }
 function updatePickPreview(){
   const el=document.getElementById('pickPreview'); if(!el) return;
-  if(pendingPick&&pendingPick.poster){
+  const nt=document.getElementById('newTitle');
+  const poster=pendingCover||(pendingPick&&pendingPick.poster)||'';
+  if(poster){
     el.hidden=false;
-    const meta=[esc(pendingPick.year),esc(pendingPick.genre)].filter(Boolean).join(' · ');
-    el.innerHTML=`<img src="${esc(pendingPick.poster)}" alt="" /><div><div class="pp-t">${esc(pendingPick.title)}</div>${meta?`<div class="pp-y">${meta}</div>`:''}</div>`;
+    const title=(pendingPick&&pendingPick.title)||(nt?nt.value:'')||'Cover ready';
+    const meta=[esc(pendingPick&&pendingPick.year),esc(pendingPick&&pendingPick.genre)].filter(Boolean).join(' · ');
+    el.innerHTML=`<img src="${esc(poster)}" alt="" /><div><div class="pp-t">${esc(title)}</div>${meta?`<div class="pp-y">${meta}</div>`:''}</div>`;
   }else{ el.hidden=true; el.innerHTML=''; }
 }
 function commitNew(){
   const nt=document.getElementById('newTitle'), nd=document.getElementById('newDate');
   const t=nt?nt.value:'', d=nd?nd.value:'';
-  const extra=(pendingPick&&pendingPick.title.toLowerCase()===t.trim().toLowerCase())?pendingPick:null;
+  let extra=(pendingPick&&pendingPick.title.toLowerCase()===t.trim().toLowerCase())?{...pendingPick}:null;
+  if(pendingCover){ extra=extra||{}; extra.poster=pendingCover; }
   addMovie(t,d,extra);
+}
+
+/* ---------- cover image upload ---------- */
+/* Read a chosen image file, downscale it (longest side 400px) and hand back a
+   compact JPEG data URL so it travels inside the JSON blob / backups. */
+function fileToPoster(file,cb){
+  if(!file){ return; }
+  const reader=new FileReader();
+  reader.onload=()=>{ const img=new Image();
+    img.onload=()=>{ const MAX=400; const scale=Math.min(1,MAX/Math.max(img.width,img.height));
+      const w=Math.max(1,Math.round(img.width*scale)), h=Math.max(1,Math.round(img.height*scale));
+      try{ const c=document.createElement('canvas'); c.width=w; c.height=h;
+        c.getContext('2d').drawImage(img,0,0,w,h); cb(c.toDataURL('image/jpeg',0.82)); }
+      catch(e){ cb(reader.result); } };
+    img.onerror=()=>cb(reader.result);
+    img.src=reader.result; };
+  reader.readAsDataURL(file);
+}
+function chooseImage(handler){
+  const inp=document.createElement('input'); inp.type='file'; inp.accept='image/*';
+  inp.onchange=()=>{ const f=inp.files&&inp.files[0]; if(f) fileToPoster(f,handler); };
+  inp.click();
+}
+function pickCover(id){ chooseImage(url=>{ const m=getMovie(id); if(!m) return; m.poster=url; scheduleSave(); render(); toast('Cover updated'); }); }
+function pickCoverForNew(){ chooseImage(url=>{ pendingCover=url; updatePickPreview(); toast('Cover ready'); }); }
+
+/* ---------- export / import (state file) ---------- */
+function exportData(){
+  const payload={app:'movie-club',schema:SCHEMA_VERSION,exported:new Date().toISOString(),data};
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob); const a=document.createElement('a');
+  a.href=url; a.download=`movie-club-backup-${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); },0); toast('Exported');
+}
+function importData(){
+  const inp=document.createElement('input'); inp.type='file'; inp.accept='application/json,.json';
+  inp.onchange=()=>{ const f=inp.files&&inp.files[0]; if(!f) return;
+    const reader=new FileReader();
+    reader.onload=()=>{ let j; try{ j=JSON.parse(reader.result); }catch(e){ alert('Could not read that file — is it valid JSON?'); return; }
+      const movies = Array.isArray(j&&j.movies) ? j.movies : (j&&j.data&&Array.isArray(j.data.movies) ? j.data.movies : null);
+      if(!movies){ alert("That file doesn't look like a Movie Club backup."); return; }
+      if(data.movies.length && !confirm(`Replace your current ${data.movies.length} film(s) with ${movies.length} from this backup? This overwrites what's here.`)) return;
+      data={movies}; normalize(); selectedId=data.movies[0]?data.movies[0].id:null; scheduleSave(); render(); toast(`Imported ${movies.length} films`); };
+    reader.readAsText(f); };
+  inp.click();
+}
+function dataToolsHTML(){
+  return `<div class="datatools">
+      <button class="mini" data-act="export">⤓ Export data (.json)</button>
+      <button class="mini" data-act="import">⤒ Import data</button>
+    </div>
+    <div class="datahint">Back up your ratings to a file, or restore them — handy when rolling forward to new versions.</div>`;
 }
 
 /* ---------- events ---------- */
@@ -557,9 +621,11 @@ function wire(){
   const sel=document.getElementById('movieSelect');
   if(sel) sel.addEventListener('change',e=>{selectedId=e.target.value;render();});
   const tg=document.getElementById('toggleNew');
-  if(tg) tg.addEventListener('click',()=>{newFormOpen=!newFormOpen;pendingPick=null;render();if(newFormOpen)setTimeout(()=>document.getElementById('newTitle')?.focus(),40);});
+  if(tg) tg.addEventListener('click',()=>{newFormOpen=!newFormOpen;pendingPick=null;pendingCover=null;render();if(newFormOpen)setTimeout(()=>document.getElementById('newTitle')?.focus(),40);});
   const sn=document.getElementById('saveNew');
   if(sn) sn.addEventListener('click',commitNew);
+  const uc=document.getElementById('uploadCover');
+  if(uc) uc.addEventListener('click',pickCoverForNew);
   const nt=document.getElementById('newTitle');
   if(nt){
     nt.addEventListener('input',()=>{ pendingPick=null; updatePickPreview(); querySuggest(nt.value); });
@@ -584,6 +650,9 @@ function wire(){
   root.querySelectorAll('[data-act="rate"]').forEach(b=>b.addEventListener('click',()=>{selectedId=b.dataset.id;activeTab='chad';render();window.scrollTo({top:0,behavior:'smooth'});}));
   root.querySelectorAll('[data-act="rename"]').forEach(b=>b.addEventListener('click',()=>renameMovie(b.dataset.id)));
   root.querySelectorAll('[data-act="genre"]').forEach(b=>b.addEventListener('click',()=>editGenre(b.dataset.id)));
+  root.querySelectorAll('[data-act="cover"]').forEach(b=>b.addEventListener('click',()=>pickCover(b.dataset.id)));
+  root.querySelectorAll('[data-act="export"]').forEach(b=>b.addEventListener('click',exportData));
+  root.querySelectorAll('[data-act="import"]').forEach(b=>b.addEventListener('click',importData));
   root.querySelectorAll('[data-act="delete"]').forEach(b=>b.addEventListener('click',()=>deleteMovie(b.dataset.id)));
 }
 

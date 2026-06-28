@@ -21,6 +21,19 @@ synced across both phones via Cloudflare KV.
 - A person's average is the weighted mean of their rated categories; the shared verdict is
   the mean of the two people's averages.
 
+## Posters & covers
+- Picking a search suggestion attaches its poster automatically.
+- For films search can't find, use **Add cover / Change cover** on the rating card (or
+  **Upload cover image** in the add-film form) to upload your own. Images are downscaled to a
+  small JPEG and stored inline with the data, so they travel with backups and sync via KV.
+
+## Backup & roll-forward
+The **Shared** tab has **Export data (.json)** and **Import data**. Export downloads a
+self-contained state file (`{ app, schema, exported, data }`). Import accepts that file (or a
+raw `{ movies: [] }` blob) and runs it through `normalize()`, which backfills any newly-added
+fields — so a backup taken on an older version restores cleanly into a newer one. Bump
+`SCHEMA_VERSION` in `index.html` when the shape changes.
+
 ---
 
 ## Deploy
