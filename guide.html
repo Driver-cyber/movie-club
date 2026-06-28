@@ -58,6 +58,8 @@
     color:var(--rust);font-weight:500;margin-bottom:14px}
   .hero h1{font-family:var(--serif);font-style:italic;font-weight:500;
     font-size:clamp(40px,13vw,68px);line-height:0.96;letter-spacing:-0.01em}
+  .hero-badge{font-family:var(--mono);font-size:10px;letter-spacing:0.14em;text-transform:uppercase;
+    color:var(--gold);border:1px solid var(--gold-dim);border-radius:20px;padding:7px 15px;margin-top:22px}
   .hero p{font-family:var(--mono);font-size:12px;color:var(--bone-dim);letter-spacing:0.06em;
     margin-top:18px;line-height:1.8;max-width:380px}
   .scroll-cue{margin-top:46px;font-family:var(--mono);font-size:10px;letter-spacing:0.2em;
@@ -80,10 +82,10 @@
 
   /* reveal animation */
   .reveal{opacity:0;transform:translateY(26px);transition:opacity .7s ease,transform .7s ease}
-  .scene.in .reveal{opacity:1;transform:none}
-  .scene.in .reveal.d1{transition-delay:.08s}
-  .scene.in .reveal.d2{transition-delay:.18s}
-  .scene.in .reveal.d3{transition-delay:.28s}
+  .scene.in .reveal,.hero.in .reveal{opacity:1;transform:none}
+  .scene.in .reveal.d1,.hero.in .reveal.d1{transition-delay:.08s}
+  .scene.in .reveal.d2,.hero.in .reveal.d2{transition-delay:.18s}
+  .scene.in .reveal.d3,.hero.in .reveal.d3{transition-delay:.28s}
   @media (prefers-reduced-motion:reduce){ .reveal{opacity:1;transform:none;transition:none} .scroll-cue .chev{animation:none} html{scroll-behavior:auto} }
 
   /* phone mock */
@@ -209,11 +211,12 @@
 <a class="top-skip" href="/">✕ Close</a>
 <nav class="dots" id="dots" aria-label="Jump to section"></nav>
 
-<header class="hero" id="s-hero">
+<header class="hero in" id="s-hero">
   <div class="eyebrow reveal">The Stewart Screening Room</div>
   <h1 class="reveal d1">How<br>Movie&nbsp;Club<br>works</h1>
-  <p class="reveal d2">A two-minute scroll through rating films together, sharing across both your phones, and keeping your ratings safe.</p>
-  <div class="scroll-cue reveal d3">Scroll<div class="chev"></div></div>
+  <div class="hero-badge reveal d2">A quick visual guide · about 2 minutes</div>
+  <p class="reveal d2">Rate films together · sync across both your phones · keep every rating safe. Here's the whole thing, one scroll at a time.</p>
+  <div class="scroll-cue reveal d3">Scroll down to begin<div class="chev"></div></div>
 </header>
 
 <main>
