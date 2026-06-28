@@ -80,6 +80,32 @@
   .field input::placeholder{color:var(--bone-faint);font-style:italic}
   .field input:focus-visible{outline:2px solid var(--rust);outline-offset:1px}
 
+  /* autocomplete */
+  .ac-wrap{position:relative}
+  .suggbox{position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:40;
+    background:var(--ink-3);border:1px solid var(--line-strong);border-radius:12px;
+    display:none;max-height:328px;overflow-y:auto;-webkit-overflow-scrolling:touch;
+    box-shadow:0 26px 54px -20px rgba(0,0,0,0.92)}
+  .suggbox.open{display:block}
+  .sugg{display:flex;align-items:center;gap:11px;width:100%;text-align:left;background:transparent;
+    border:none;border-bottom:1px solid var(--line);padding:9px 11px;cursor:pointer;color:var(--bone)}
+  .sugg:last-child{border-bottom:none}
+  .sugg:active{background:var(--ink-4)}
+  .sugg-img{width:38px;height:56px;border-radius:6px;object-fit:cover;background:var(--ink);
+    flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px}
+  .sugg-img.ph{color:var(--bone-faint)}
+  .sugg-meta{display:flex;flex-direction:column;gap:2px;min-width:0}
+  .sugg-title{font-family:var(--serif);font-style:italic;font-size:16px;line-height:1.15;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .sugg-year{font-family:var(--mono);font-size:10px;color:var(--bone-faint);letter-spacing:0.08em}
+  .sugg-hint{font-family:var(--mono);font-size:10px;letter-spacing:0.06em;color:var(--bone-faint);
+    padding:9px 12px;text-align:center}
+  .pickprev{display:flex;gap:11px;align-items:center;background:var(--ink);border:1px solid var(--line-strong);
+    border-radius:10px;padding:9px}
+  .pickprev img{width:40px;height:60px;border-radius:6px;object-fit:cover;flex-shrink:0}
+  .pp-t{font-family:var(--serif);font-style:italic;font-size:15px;line-height:1.15}
+  .pp-y{font-family:var(--mono);font-size:10px;color:var(--bone-faint);margin-top:3px;letter-spacing:0.08em}
+
   .panel{display:none;animation:rise .22s ease}
   .panel.active{display:block}
   @keyframes rise{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
@@ -87,15 +113,18 @@
 
   .card{background:linear-gradient(180deg,var(--ink-2),var(--ink));border:1px solid var(--line);
     border-radius:15px;padding:19px}
-  .nowtitle{font-family:var(--serif);font-style:italic;font-weight:500;font-size:25px;line-height:1.05;margin-bottom:3px}
+  .nowhead{display:flex;gap:14px;align-items:flex-start;margin-bottom:16px}
+  .nowposter{width:62px;height:92px;border-radius:9px;object-fit:cover;flex-shrink:0;
+    background:var(--ink-3);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:26px}
+  .nowtitle{font-family:var(--serif);font-style:italic;font-weight:500;font-size:25px;line-height:1.05;margin-bottom:4px}
   .nowmeta{font-family:var(--mono);font-size:10.5px;letter-spacing:0.08em;color:var(--bone-faint);
-    text-transform:uppercase;margin-bottom:18px}
+    text-transform:uppercase;line-height:1.6}
 
   .cat{padding:14px 0;border-top:1px solid var(--line)}
   .cat:first-of-type{border-top:none;padding-top:2px}
   .cat-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:7px}
   .cat-name{font-family:var(--serif);font-size:19px;font-weight:600}
-  .cat-desc{font-family:var(--mono);font-size:9.5px;letter-spacing:0.1em;text-transform:uppercase;color:var(--bone-faint)}
+  .cat-desc{font-family:var(--mono);font-size:9.5px;letter-spacing:0.1em;text-transform:uppercase;color:var(--bone-faint);text-align:right}
   .stars{display:flex;align-items:center}
   .star{font-size:33px;line-height:1;cursor:pointer;color:var(--ink-4);padding:5px 6px;margin:-3px 0;
     transition:transform .08s,color .12s;user-select:none;-webkit-text-stroke:1.4px var(--gold-dim)}
@@ -103,6 +132,26 @@
   .star:active{transform:scale(1.2)}
   .star:focus-visible{outline:2px solid var(--rust);outline-offset:2px;border-radius:6px}
   .catscore{margin-left:auto;font-family:var(--mono);font-size:13px;color:var(--bone-dim);font-weight:600}
+
+  /* predictability slider */
+  .slider-row{display:flex;align-items:center;gap:11px}
+  .slabel{font-family:var(--mono);font-size:9px;letter-spacing:0.1em;text-transform:uppercase;
+    color:var(--bone-faint);white-space:nowrap}
+  input.slider{flex:1;-webkit-appearance:none;appearance:none;height:6px;border-radius:6px;
+    background:linear-gradient(90deg,var(--rust),var(--gold));outline:none;margin:6px 0}
+  input.slider.unset{background:var(--ink-4)}
+  input.slider::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;border-radius:50%;
+    background:var(--bone);border:2px solid var(--ink);box-shadow:0 2px 6px rgba(0,0,0,0.5);cursor:pointer}
+  input.slider::-moz-range-thumb{width:24px;height:24px;border-radius:50%;background:var(--bone);
+    border:2px solid var(--ink);box-shadow:0 2px 6px rgba(0,0,0,0.5);cursor:pointer}
+  input.slider:focus-visible{outline:2px solid var(--rust);outline-offset:4px}
+  .slider-read{margin-top:9px;font-family:var(--mono);font-size:11px;color:var(--bone-dim);
+    display:flex;align-items:center;gap:11px}
+  .sread{color:var(--gold);font-weight:600;letter-spacing:0.02em}
+  .sread.none{color:var(--bone-faint);font-weight:400}
+  .clearpred{font-family:var(--mono);font-size:10px;color:var(--bone-faint);background:transparent;
+    border:1px solid var(--line);border-radius:7px;padding:4px 9px;cursor:pointer}
+  .clearpred:active{color:var(--bone)}
 
   .notes-wrap{margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
   .notes-wrap label{font-family:var(--mono);font-size:10px;letter-spacing:0.18em;text-transform:uppercase;
@@ -129,6 +178,8 @@
   .filmrow{background:linear-gradient(180deg,var(--ink-2),var(--ink));border:1px solid var(--line);
     border-radius:14px;padding:15px 16px;margin-bottom:10px}
   .filmrow-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+  .frposter{width:46px;height:69px;border-radius:7px;object-fit:cover;flex-shrink:0;border:1px solid var(--line)}
+  .frmain{flex:1;min-width:0}
   .filmrow .ftitle{font-family:var(--serif);font-style:italic;font-weight:500;font-size:20px;line-height:1.1}
   .filmrow .fdate{font-family:var(--mono);font-size:9.5px;letter-spacing:0.08em;text-transform:uppercase;color:var(--bone-faint);margin-top:4px}
   .verdict{text-align:right;flex-shrink:0}
@@ -144,6 +195,9 @@
   .meter span.joelle{background:var(--gold)}
   .pscore .pnum{font-family:var(--mono);font-size:12px;font-weight:600;width:30px;text-align:right}
   .pscore .pnum.none{color:var(--bone-faint);font-weight:400}
+  .predline{margin-top:11px;font-family:var(--mono);font-size:10px;letter-spacing:0.04em;color:var(--bone-faint)}
+  .predline .pl-k{text-transform:uppercase;letter-spacing:0.12em;margin-right:7px;color:var(--bone-dim)}
+  .predline b{color:var(--bone);font-weight:600}
   .twonotes{margin-top:12px;display:grid;gap:8px}
   .qnote{background:var(--ink);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
   .qnote .qwho{font-family:var(--mono);font-size:9px;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:4px}
@@ -208,19 +262,35 @@
    Storage: PUT/GET /api/data (Cloudflare KV) for cross-device sync,
    mirrored to localStorage for instant + offline use. Falls back to
    localStorage, then in-memory, if no backend is reachable.
+   Title search + posters via GET /api/search (TMDB if keyed, else iTunes).
    ============================================================== */
 const API='/api/data';
+const SEARCH='/api/search';
 const LKEY='movieclub:data';
 const CATEGORIES=[
-  {key:'story', label:'Story',  desc:'plot · writing · pacing'},
-  {key:'acting',label:'Acting', desc:'performances · casting'},
-  {key:'vibe',  label:'Vibe',   desc:'overall enjoyment'},
+  {key:'plot',               label:'Plot',               desc:'story · structure'},
+  {key:'writing',            label:'Writing',            desc:'script · dialogue'},
+  {key:'pacing',             label:'Pacing',             desc:'flow · momentum'},
+  {key:'actingPerformance',  label:'Acting — Performance',desc:'the performances'},
+  {key:'actingCasting',      label:'Acting — Casting',   desc:'right people, right roles'},
+  {key:'cinematography',     label:'Cinematography',     desc:'shots · lighting · look'},
+  {key:'soundtrack',         label:'Soundtrack',         desc:'score · songs'},
+  {key:'soundscape',         label:'Soundscape',         desc:'sound design · mix'},
+  {key:'ending',             label:'Satisfying ending',  desc:'did it stick the landing'},
+  {key:'predictability',     label:'Predictability',     desc:'predictable ↔ shocking', type:'slider', weight:0.5},
+  {key:'enjoyment',          label:'Overall enjoyment',  desc:'all-in · would rewatch'},
 ];
+/* Every category feeds the verdict. Predictability counts too (predictable =
+   slightly negative, shocking = positive) but at half a normal category's
+   weight, so it nudges the average without dominating it. */
+const PRED_WEIGHT=0.5;
 const PEOPLE={chad:'Chad',joelle:'Joelle'};
+const PRED_WORDS=['Not rated','Totally predictable','Predictable','Even odds','Surprising','Genuinely shocking'];
 
 let data={movies:[]};
 let selectedId=null, activeTab='chad', sortMode='recent', newFormOpen=false;
 let saveTimer=null, source='memory';
+let suggTimer=null, suggList=[], pendingPick=null;
 
 /* ---------- storage ---------- */
 function mirrorLocal(){ try{ localStorage.setItem(LKEY, JSON.stringify(data)); }catch(e){} }
@@ -229,10 +299,10 @@ function readLocal(){ try{ const s=localStorage.getItem(LKEY); if(s){ const j=JS
 async function loadData(){
   try{
     const r=await fetch(API,{cache:'no-store'});
-    if(r.ok){ const j=await r.json(); if(j&&Array.isArray(j.movies)){ data=j; mirrorLocal(); source='server'; return; } }
+    if(r.ok){ const j=await r.json(); if(j&&Array.isArray(j.movies)){ data=j; normalize(); mirrorLocal(); source='server'; return; } }
   }catch(e){}
   const local=readLocal();
-  if(local){ data=local; source='local'; return; }
+  if(local){ data=local; normalize(); source='local'; return; }
   source='memory';
 }
 function scheduleSave(){ clearTimeout(saveTimer); saveTimer=setTimeout(saveData,450); }
@@ -256,16 +326,32 @@ function toast(msg){
 /* ---------- helpers ---------- */
 function uid(){ return 'm'+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
 function getMovie(id){ return data.movies.find(m=>m.id===id)||null; }
-function blank(){ return {chad:{story:0,acting:0,vibe:0,notes:''},joelle:{story:0,acting:0,vibe:0,notes:''}}; }
-function personAvg(m,p){ const r=m.ratings[p]; const v=CATEGORIES.map(c=>r[c.key]).filter(x=>x>0); return v.length?v.reduce((a,b)=>a+b,0)/v.length:null; }
+function blankPerson(){ const o={notes:''}; CATEGORIES.forEach(c=>o[c.key]=0); return o; }
+function blank(){ return {chad:blankPerson(),joelle:blankPerson()}; }
+function normalize(){
+  if(!data||!Array.isArray(data.movies)){ data={movies:[]}; return; }
+  data.movies.forEach(m=>{
+    if(typeof m.poster!=='string') m.poster='';
+    if(typeof m.year!=='string') m.year='';
+    if(!m.ratings||typeof m.ratings!=='object') m.ratings=blank();
+    Object.keys(PEOPLE).forEach(p=>{
+      const r=m.ratings[p]||(m.ratings[p]=blankPerson());
+      CATEGORIES.forEach(c=>{ if(typeof r[c.key]!=='number') r[c.key]=0; });
+      if(typeof r.notes!=='string') r.notes='';
+    });
+  });
+}
+function personAvg(m,p){ const r=m.ratings[p]; let sum=0,wsum=0;
+  CATEGORIES.forEach(c=>{ const v=r[c.key]; if(v>0){ const w=c.weight||1; sum+=v*w; wsum+=w; } });
+  return wsum?sum/wsum:null; }
 function combinedAvg(m){ const a=[personAvg(m,'chad'),personAvg(m,'joelle')].filter(x=>x!==null); return a.length?a.reduce((x,y)=>x+y,0)/a.length:null; }
 function fmt(n){ return n===null?'—':(Math.round(n*10)/10).toFixed(1); }
 function esc(s){ return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
 /* ---------- mutations ---------- */
-function addMovie(title,date){ const t=(title||'').trim(); if(!t) return;
-  const m={id:uid(),title:t,watched:date||'',ratings:blank()};
-  data.movies.unshift(m); selectedId=m.id; newFormOpen=false; scheduleSave(); render(); }
+function addMovie(title,date,extra){ const t=(title||'').trim(); if(!t) return;
+  const m={id:uid(),title:t,watched:date||'',year:(extra&&extra.year)||'',poster:(extra&&extra.poster)||'',ratings:blank()};
+  data.movies.unshift(m); selectedId=m.id; newFormOpen=false; pendingPick=null; scheduleSave(); render(); }
 function deleteMovie(id){ const m=getMovie(id); if(!m) return;
   if(!confirm(`Remove "${m.title}" and both your ratings? This can't be undone.`)) return;
   data.movies=data.movies.filter(x=>x.id!==id);
@@ -295,7 +381,12 @@ function render(){
       </div>
       <div class="newform ${newFormOpen?'open':''}">
         <div class="field"><label>Movie title</label>
-          <input id="newTitle" type="text" placeholder="e.g. The Holdovers" autocomplete="off" enterkeyhint="done" /></div>
+          <div class="ac-wrap">
+            <input id="newTitle" type="text" placeholder="Start typing a title…" autocomplete="off" enterkeyhint="done" />
+            <div id="suggBox" class="suggbox" role="listbox" aria-label="Movie suggestions"></div>
+          </div>
+        </div>
+        <div id="pickPreview" class="pickprev" hidden></div>
         <div class="field"><label>Watched on (optional)</label><input id="newDate" type="date" /></div>
         <button class="btn btn-add" id="saveNew" style="min-height:50px">Add film</button>
       </div>
@@ -319,14 +410,33 @@ function movieSelectHTML(){
 function starsHTML(p,cat,val){ let s='';
   for(let i=1;i<=5;i++) s+=`<span class="star ${i<=val?'on':''}" role="button" tabindex="0" aria-label="${cat} ${i} of 5" data-act="star" data-person="${p}" data-cat="${cat}" data-val="${i}">★</span>`;
   return s; }
+function starCatHTML(p,c,val){
+  return `<div class="cat"><div class="cat-head"><span class="cat-name">${c.label}</span><span class="cat-desc">${c.desc}</span></div>
+    <div class="stars">${starsHTML(p,c.key,val)}<span class="catscore">${val?val+'/5':'—'}</span></div></div>`;
+}
+function sliderCatHTML(p,c,val){
+  const v=val||0;
+  return `<div class="cat"><div class="cat-head"><span class="cat-name">${c.label}</span><span class="cat-desc">${c.desc}</span></div>
+    <div class="slider-row">
+      <span class="slabel">Predictable</span>
+      <input type="range" class="slider ${v?'':'unset'}" min="0" max="5" step="1" value="${v}"
+        data-act="slider" data-person="${p}" data-cat="${c.key}" aria-label="${c.label} — predictable to shocking" />
+      <span class="slabel">Shocking</span>
+    </div>
+    <div class="slider-read"><span class="sread ${v?'':'none'}" data-read="${p}-${c.key}">${PRED_WORDS[v]}</span>${v?`<button class="clearpred" data-act="clearpred" data-person="${p}" data-cat="${c.key}">clear</button>`:''}</div>
+  </div>`;
+}
+function posterHTML(m,cls,ph){ return m.poster?`<img class="${cls}" src="${esc(m.poster)}" alt="" loading="lazy" />`:`<div class="${cls} ph">${ph}</div>`; }
 function personPanel(p){
   if(!data.movies.length) return `<div class="empty"><div class="big">Nothing on the bill yet</div><div class="small">Tap ＋ to add the first film<br>you watched together.</div></div>`;
   const m=getMovie(selectedId); if(!m) return '';
   const r=m.ratings[p], avg=personAvg(m,p);
-  const cats=CATEGORIES.map(c=>`<div class="cat"><div class="cat-head"><span class="cat-name">${c.label}</span><span class="cat-desc">${c.desc}</span></div>
-    <div class="stars">${starsHTML(p,c.key,r[c.key])}<span class="catscore">${r[c.key]?r[c.key]+'/5':'—'}</span></div></div>`).join('');
-  return `<div class="card"><div class="nowtitle">${esc(m.title)}</div>
-    <div class="nowmeta">${PEOPLE[p]}'s scorecard${avg!==null?`  ·  avg ${fmt(avg)}/5`:''}${m.watched?`  ·  ${esc(m.watched)}`:''}</div>
+  const cats=CATEGORIES.map(c=> c.type==='slider' ? sliderCatHTML(p,c,r[c.key]) : starCatHTML(p,c,r[c.key]) ).join('');
+  return `<div class="card">
+    <div class="nowhead">${posterHTML(m,'nowposter','🎬')}
+      <div><div class="nowtitle">${esc(m.title)}</div>
+        <div class="nowmeta">${PEOPLE[p]}'s scorecard${avg!==null?`  ·  avg ${fmt(avg)}/5`:''}${m.year?`  ·  ${esc(m.year)}`:''}${m.watched?`  ·  seen ${esc(m.watched)}`:''}</div></div>
+    </div>
     ${cats}
     <div class="notes-wrap"><label for="notes-${p}">${PEOPLE[p]}'s notes</label>
       <textarea class="notes" id="notes-${p}" data-person="${p}" placeholder="Best scene, gripes, who picked it…">${esc(r.notes)}</textarea></div></div>`;
@@ -349,17 +459,65 @@ function sharedPanel(){
     <button class="chip ${sortMode==='top'?'on':''}" data-sort="top">Top rated</button></div>`;
   const rows=sorted.map(m=>{ const c=personAvg(m,'chad'),j=personAvg(m,'joelle'),cv=combinedAvg(m);
     const cn=m.ratings.chad.notes.trim(),jn=m.ratings.joelle.notes.trim();
+    const cp=m.ratings.chad.predictability,jp=m.ratings.joelle.predictability;
+    const predline=(cp||jp)?`<div class="predline"><span class="pl-k">Predictability</span>${cp?`Chad <b>${PRED_WORDS[cp]}</b>`:''}${cp&&jp?'  ·  ':''}${jp?`Joelle <b>${PRED_WORDS[jp]}</b>`:''}</div>`:'';
     const notes=(cn||jn)?`<div class="twonotes">${cn?`<div class="qnote"><div class="qwho c">Chad</div><div class="qtext">${esc(cn)}</div></div>`:''}${jn?`<div class="qnote"><div class="qwho j">Joelle</div><div class="qtext">${esc(jn)}</div></div>`:''}</div>`:'';
-    return `<div class="filmrow"><div class="filmrow-head"><div><div class="ftitle">${esc(m.title)}</div>${m.watched?`<div class="fdate">Watched ${esc(m.watched)}</div>`:''}</div>
+    return `<div class="filmrow"><div class="filmrow-head">${m.poster?posterHTML(m,'frposter',''):''}
+      <div class="frmain"><div class="ftitle">${esc(m.title)}</div>${(m.year||m.watched)?`<div class="fdate">${m.year?esc(m.year):''}${m.year&&m.watched?' · ':''}${m.watched?`watched ${esc(m.watched)}`:''}</div>`:''}</div>
       <div class="verdict"><div class="vnum ${cv===null?'empty':''}">${fmt(cv)}</div><div class="vlbl">Shared verdict</div></div></div>
       <div class="scorebars">
         <div class="pscore"><span class="who">Chad</span><span class="meter"><span class="chad" style="width:${c?(c/5*100):0}%"></span></span><span class="pnum ${c===null?'none':''}">${fmt(c)}</span></div>
         <div class="pscore"><span class="who">Joelle</span><span class="meter"><span class="joelle" style="width:${j?(j/5*100):0}%"></span></span><span class="pnum ${j===null?'none':''}">${fmt(j)}</span></div>
-      </div>${notes}
+      </div>${predline}${notes}
       <div class="filmrow-foot"><button class="mini" data-act="rate" data-id="${m.id}">Open &amp; rate</button>
         <button class="mini" data-act="rename" data-id="${m.id}">Rename</button>
         <button class="mini danger" data-act="delete" data-id="${m.id}">Remove</button></div></div>`; }).join('');
   return stats+sorts+rows;
+}
+
+/* ---------- title search / autocomplete ---------- */
+function querySuggest(q){
+  clearTimeout(suggTimer);
+  const box=document.getElementById('suggBox'); const term=(q||'').trim();
+  if(term.length<2){ if(box){ box.innerHTML=''; box.classList.remove('open'); } return; }
+  suggTimer=setTimeout(async()=>{
+    try{
+      const r=await fetch(`${SEARCH}?q=${encodeURIComponent(term)}`,{cache:'no-store'});
+      if(!r.ok) return; const d=await r.json();
+      renderSuggest(Array.isArray(d.results)?d.results:[]);
+    }catch(e){}
+  },220);
+}
+function renderSuggest(list){
+  suggList=list;
+  const box=document.getElementById('suggBox'); if(!box) return;
+  if(!list.length){ box.innerHTML=`<div class="sugg-hint">No matches — you can still add the title by hand</div>`; box.classList.add('open'); return; }
+  box.innerHTML=list.map((m,i)=>`<button type="button" class="sugg" data-idx="${i}" role="option">
+    ${m.poster?`<img class="sugg-img" src="${esc(m.poster)}" alt="" loading="lazy" />`:`<span class="sugg-img ph">🎞</span>`}
+    <span class="sugg-meta"><span class="sugg-title">${esc(m.title)}</span>${m.year?`<span class="sugg-year">${esc(m.year)}</span>`:''}</span>
+  </button>`).join('');
+  box.classList.add('open');
+  box.querySelectorAll('.sugg').forEach(b=>b.addEventListener('click',()=>pickSuggest(+b.dataset.idx)));
+}
+function pickSuggest(i){
+  const m=suggList[i]; if(!m) return;
+  pendingPick={title:m.title,year:m.year||'',poster:m.poster||''};
+  const nt=document.getElementById('newTitle'); if(nt) nt.value=m.title;
+  const box=document.getElementById('suggBox'); if(box){ box.innerHTML=''; box.classList.remove('open'); }
+  updatePickPreview();
+}
+function updatePickPreview(){
+  const el=document.getElementById('pickPreview'); if(!el) return;
+  if(pendingPick&&pendingPick.poster){
+    el.hidden=false;
+    el.innerHTML=`<img src="${esc(pendingPick.poster)}" alt="" /><div><div class="pp-t">${esc(pendingPick.title)}</div>${pendingPick.year?`<div class="pp-y">${esc(pendingPick.year)}</div>`:''}</div>`;
+  }else{ el.hidden=true; el.innerHTML=''; }
+}
+function commitNew(){
+  const nt=document.getElementById('newTitle'), nd=document.getElementById('newDate');
+  const t=nt?nt.value:'', d=nd?nd.value:'';
+  const extra=(pendingPick&&pendingPick.title.toLowerCase()===t.trim().toLowerCase())?pendingPick:null;
+  addMovie(t,d,extra);
 }
 
 /* ---------- events ---------- */
@@ -369,15 +527,28 @@ function wire(){
   const sel=document.getElementById('movieSelect');
   if(sel) sel.addEventListener('change',e=>{selectedId=e.target.value;render();});
   const tg=document.getElementById('toggleNew');
-  if(tg) tg.addEventListener('click',()=>{newFormOpen=!newFormOpen;render();if(newFormOpen)setTimeout(()=>document.getElementById('newTitle')?.focus(),40);});
+  if(tg) tg.addEventListener('click',()=>{newFormOpen=!newFormOpen;pendingPick=null;render();if(newFormOpen)setTimeout(()=>document.getElementById('newTitle')?.focus(),40);});
   const sn=document.getElementById('saveNew');
-  if(sn) sn.addEventListener('click',()=>addMovie(document.getElementById('newTitle').value,document.getElementById('newDate').value));
+  if(sn) sn.addEventListener('click',commitNew);
   const nt=document.getElementById('newTitle');
-  if(nt) nt.addEventListener('keydown',e=>{if(e.key==='Enter')addMovie(e.target.value,document.getElementById('newDate').value);});
+  if(nt){
+    nt.addEventListener('input',()=>{ pendingPick=null; updatePickPreview(); querySuggest(nt.value); });
+    nt.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); commitNew(); } });
+  }
   root.querySelectorAll('[data-act="star"]').forEach(s=>{
     const fire=()=>setRating(selectedId,s.dataset.person,s.dataset.cat,+s.dataset.val);
     s.addEventListener('click',fire);
     s.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();fire();}});});
+  root.querySelectorAll('[data-act="slider"]').forEach(sl=>{
+    sl.addEventListener('input',()=>{ const v=+sl.value; const m=getMovie(selectedId); if(!m) return;
+      m.ratings[sl.dataset.person][sl.dataset.cat]=v;
+      const rd=root.querySelector(`[data-read="${sl.dataset.person}-${sl.dataset.cat}"]`);
+      if(rd){ rd.textContent=PRED_WORDS[v]; rd.classList.toggle('none',!v); }
+      sl.classList.toggle('unset',!v); scheduleSave(); });
+    sl.addEventListener('change',()=>render());   // refresh the "clear" affordance
+  });
+  root.querySelectorAll('[data-act="clearpred"]').forEach(b=>b.addEventListener('click',()=>{
+    const m=getMovie(selectedId); if(!m) return; m.ratings[b.dataset.person][b.dataset.cat]=0; scheduleSave(); render(); }));
   root.querySelectorAll('textarea.notes').forEach(ta=>ta.addEventListener('input',()=>setNotes(selectedId,ta.dataset.person,ta.value)));
   root.querySelectorAll('[data-sort]').forEach(c=>c.addEventListener('click',()=>{sortMode=c.dataset.sort;render();}));
   root.querySelectorAll('[data-act="rate"]').forEach(b=>b.addEventListener('click',()=>{selectedId=b.dataset.id;activeTab='chad';render();window.scrollTo({top:0,behavior:'smooth'});}));
@@ -390,7 +561,7 @@ document.addEventListener('visibilitychange',async()=>{
   if(document.visibilityState!=='visible'||source==='memory') return;
   const ae=document.activeElement; if(ae&&/INPUT|TEXTAREA/.test(ae.tagName)) return;
   try{ const r=await fetch(API,{cache:'no-store'}); if(r.ok){ const j=await r.json();
-    if(j&&Array.isArray(j.movies)){ data=j; mirrorLocal(); if(selectedId&&!getMovie(selectedId)) selectedId=data.movies[0]?.id||null; render(); } } }catch(e){}
+    if(j&&Array.isArray(j.movies)){ data=j; normalize(); mirrorLocal(); if(selectedId&&!getMovie(selectedId)) selectedId=data.movies[0]?.id||null; render(); } } }catch(e){}
 });
 
 /* boot */
