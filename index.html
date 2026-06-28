@@ -213,7 +213,8 @@
   .qnote .qwho{font-family:var(--mono);font-size:9px;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:4px}
   .qnote .qwho.c{color:var(--rust)} .qnote .qwho.j{color:var(--gold)}
   .qnote .qtext{font-family:var(--serif);font-size:14.5px;line-height:1.45;color:var(--bone-dim)}
-  .filmrow-foot{display:flex;gap:7px;margin-top:13px;padding-top:12px;border-top:1px solid var(--line);justify-content:flex-end;flex-wrap:wrap}
+  .filmrow-foot,.card-foot{display:flex;gap:7px;margin-top:13px;padding-top:12px;border-top:1px solid var(--line);justify-content:flex-end;flex-wrap:wrap}
+  .card-foot{margin-top:16px;padding-top:14px}
   .mini{font-family:var(--mono);font-size:11px;color:var(--bone-dim);background:transparent;
     border:1px solid var(--line);border-radius:9px;padding:9px 12px;cursor:pointer;min-height:38px}
   .mini.danger:active{color:#e88a6a;border-color:rgba(232,138,106,0.4)}
@@ -456,7 +457,12 @@ function personPanel(p){
     </div>
     ${cats}
     <div class="notes-wrap"><label for="notes-${p}">${PEOPLE[p]}'s notes</label>
-      <textarea class="notes" id="notes-${p}" data-person="${p}" placeholder="Best scene, gripes, who picked it…">${esc(r.notes)}</textarea></div></div>`;
+      <textarea class="notes" id="notes-${p}" data-person="${p}" placeholder="Best scene, gripes, who picked it…">${esc(r.notes)}</textarea></div>
+    <div class="card-foot">
+      <button class="mini" data-act="rename" data-id="${m.id}">Rename</button>
+      <button class="mini" data-act="genre" data-id="${m.id}">Edit genre</button>
+      <button class="mini danger" data-act="delete" data-id="${m.id}">Remove film</button>
+    </div></div>`;
 }
 function sharedPanel(){
   if(!data.movies.length) return `<div class="empty"><div class="big">Your shared shelf is empty</div><div class="small">Once you've both rated a film,<br>the combined verdicts land here.</div></div>`;
@@ -493,16 +499,21 @@ function sharedPanel(){
 }
 
 /* ---------- title search / autocomplete ---------- */
+function showSuggHint(msg){ const box=document.getElementById('suggBox'); if(!box) return;
+  suggList=[]; box.innerHTML=`<div class="sugg-hint">${esc(msg)}</div>`; box.classList.add('open'); }
 function querySuggest(q){
   clearTimeout(suggTimer);
   const box=document.getElementById('suggBox'); const term=(q||'').trim();
   if(term.length<2){ if(box){ box.innerHTML=''; box.classList.remove('open'); } return; }
   suggTimer=setTimeout(async()=>{
+    showSuggHint('Searching…');
     try{
       const r=await fetch(`${SEARCH}?q=${encodeURIComponent(term)}`,{cache:'no-store'});
-      if(!r.ok) return; const d=await r.json();
-      renderSuggest(Array.isArray(d.results)?d.results:[]);
-    }catch(e){}
+      if(!r.ok){ showSuggHint('Search unavailable — you can still type the title and add it by hand'); return; }
+      const d=await r.json(); const list=Array.isArray(d.results)?d.results:[];
+      if(!list.length){ showSuggHint(d&&d.source==='none'?'Search is down right now — add the title by hand':'No matches — type the full title and add it by hand'); return; }
+      renderSuggest(list);
+    }catch(e){ showSuggHint('Search unavailable — you can still type the title and add it by hand'); }
   },220);
 }
 function renderSuggest(list){

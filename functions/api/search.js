@@ -33,7 +33,7 @@ async function fromTMDB(q, key) {
 }
 
 async function fromITunes(q) {
-  const u = `https://itunes.apple.com/search?term=${encodeURIComponent(q)}&media=movie&entity=movie&limit=8`;
+  const u = `https://itunes.apple.com/search?term=${encodeURIComponent(q)}&media=movie&entity=movie&country=US&limit=8`;
   const r = await fetch(u);
   if (!r.ok) throw new Error('itunes ' + r.status);
   const d = await r.json();
@@ -46,16 +46,19 @@ async function fromITunes(q) {
   }));
 }
 
+// Returns { results, source, error? }. `source` tells you which provider
+// answered ('tmdb' | 'itunes' | 'none') — handy for debugging: just open
+// /api/search?q=batman in a browser. Add a TMDB_API_KEY env var for full
+// coverage; without it we fall back to Apple's (smaller) iTunes catalog.
 export async function onRequestGet({ request, env }) {
   const q = (new URL(request.url).searchParams.get('q') || '').trim();
-  if (q.length < 2) return json({ results: [] });
-  try {
-    if (env.TMDB_API_KEY) {
-      try { return json({ results: await fromTMDB(q, env.TMDB_API_KEY) }); }
-      catch (e) { /* fall through to keyless source */ }
-    }
-    return json({ results: await fromITunes(q) });
-  } catch (e) {
-    return json({ results: [] });
+  if (q.length < 2) return json({ results: [], source: 'idle' });
+  let err = '';
+  if (env.TMDB_API_KEY) {
+    try { return json({ results: await fromTMDB(q, env.TMDB_API_KEY), source: 'tmdb' }); }
+    catch (e) { err = 'tmdb: ' + e.message; }
   }
+  try { return json({ results: await fromITunes(q), source: 'itunes' }); }
+  catch (e) { err = (err ? err + '; ' : '') + 'itunes: ' + e.message; }
+  return json({ results: [], source: 'none', error: err });
 }
