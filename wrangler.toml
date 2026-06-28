@@ -1,0 +1,9 @@
+name = "movie-club"
+compatibility_date = "2024-11-01"
+pages_build_output_dir = "."
+
+# For local dev (`npx wrangler pages dev`) and/or config-driven binding.
+# In the dashboard you bind this under Settings -> Functions -> KV bindings instead.
+# [[kv_namespaces]]
+# binding = "MOVIE_CLUB"
+# id = "<your-kv-namespace-id>"

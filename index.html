@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Movie Club</title>
+
+<!-- iPhone home-screen / PWA -->
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Movie Club" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="theme-color" content="#181210" />
+<link rel="apple-touch-icon" href="/icon-180.png" />
+<link rel="manifest" href="/manifest.webmanifest" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500;1,9..144,600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#181210; --ink-2:#211810; --ink-3:#2b2017; --ink-4:#352819;
+    --bone:#ece0cc; --bone-dim:#a4937c; --bone-faint:#6d6051;
+    --rust:#c25e38; --rust-soft:#a8512f; --gold:#e0b25c; --gold-dim:#7a6233;
+    --line:rgba(236,224,204,0.10); --line-strong:rgba(236,224,204,0.18);
+    --mono:'JetBrains Mono',ui-monospace,monospace; --serif:'Fraunces',Georgia,serif;
+    --bar-h:74px;
+    --safe-top:env(safe-area-inset-top,0px);
+    --safe-bottom:env(safe-area-inset-bottom,0px);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    background:
+      radial-gradient(120% 70% at 50% -5%, rgba(194,94,56,0.12), transparent 55%),
+      radial-gradient(90% 50% at 110% 108%, rgba(224,178,92,0.07), transparent 55%),
+      var(--ink);
+    background-attachment:fixed;
+    color:var(--bone); font-family:var(--serif); -webkit-font-smoothing:antialiased;
+    min-height:100vh; min-height:100dvh;
+    padding:calc(var(--safe-top) + 14px) 14px calc(var(--bar-h) + var(--safe-bottom) + 18px);
+    overscroll-behavior-y:contain;
+  }
+  .wrap{max-width:680px;margin:0 auto}
+
+  header.app-head{text-align:center;margin-bottom:18px}
+  .eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:0.3em;text-transform:uppercase;
+    color:var(--rust);font-weight:500;margin-bottom:8px}
+  h1.title{font-family:var(--serif);font-style:italic;font-weight:500;
+    font-size:clamp(36px,12vw,52px);line-height:0.95;letter-spacing:-0.01em}
+  .sub{font-family:var(--mono);font-size:11px;color:var(--bone-faint);
+    letter-spacing:0.12em;margin-top:9px;text-transform:uppercase}
+
+  .marquee{background:linear-gradient(180deg,var(--ink-3),var(--ink-2));
+    border:1px solid var(--line-strong);border-radius:14px;padding:14px;margin-bottom:16px;
+    box-shadow:0 18px 40px -28px rgba(0,0,0,0.9)}
+  .marquee-label{font-family:var(--mono);font-size:10px;letter-spacing:0.24em;text-transform:uppercase;
+    color:var(--gold);margin-bottom:9px;display:block}
+  .marquee-row{display:flex;gap:9px;align-items:stretch}
+  select#movieSelect{flex:1;min-width:0;appearance:none;background:var(--ink);color:var(--bone);
+    font-family:var(--serif);font-style:italic;font-size:18px;font-weight:500;
+    border:1px solid var(--line-strong);border-radius:11px;padding:13px 36px 13px 14px;cursor:pointer;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23a4937c' stroke-width='2'><path d='M6 9l6 6 6-6'/></svg>");
+    background-repeat:no-repeat;background-position:right 12px center}
+  select#movieSelect:focus-visible{outline:2px solid var(--rust);outline-offset:2px}
+  .btn{font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:0.03em;border-radius:11px;
+    border:1px solid var(--line-strong);cursor:pointer;padding:0 15px;min-height:48px;
+    background:var(--ink-4);color:var(--bone);transition:background .15s,transform .05s;white-space:nowrap}
+  .btn:active{transform:translateY(1px)}
+  .btn:focus-visible{outline:2px solid var(--rust);outline-offset:2px}
+  .btn-add{background:var(--rust);border-color:transparent;color:#fff}
+
+  .newform{margin-top:13px;padding-top:13px;border-top:1px solid var(--line);
+    display:none;flex-direction:column;gap:11px}
+  .newform.open{display:flex}
+  .field{display:flex;flex-direction:column;gap:6px}
+  .field label{font-family:var(--mono);font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:var(--bone-dim)}
+  .field input{background:var(--ink);color:var(--bone);font-family:var(--serif);font-size:16px;
+    border:1px solid var(--line-strong);border-radius:10px;padding:13px 13px;width:100%}
+  .field input::placeholder{color:var(--bone-faint);font-style:italic}
+  .field input:focus-visible{outline:2px solid var(--rust);outline-offset:1px}
+
+  .panel{display:none;animation:rise .22s ease}
+  .panel.active{display:block}
+  @keyframes rise{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){.panel,.panel.active{animation:none}}
+
+  .card{background:linear-gradient(180deg,var(--ink-2),var(--ink));border:1px solid var(--line);
+    border-radius:15px;padding:19px}
+  .nowtitle{font-family:var(--serif);font-style:italic;font-weight:500;font-size:25px;line-height:1.05;margin-bottom:3px}
+  .nowmeta{font-family:var(--mono);font-size:10.5px;letter-spacing:0.08em;color:var(--bone-faint);
+    text-transform:uppercase;margin-bottom:18px}
+
+  .cat{padding:14px 0;border-top:1px solid var(--line)}
+  .cat:first-of-type{border-top:none;padding-top:2px}
+  .cat-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:7px}
+  .cat-name{font-family:var(--serif);font-size:19px;font-weight:600}
+  .cat-desc{font-family:var(--mono);font-size:9.5px;letter-spacing:0.1em;text-transform:uppercase;color:var(--bone-faint)}
+  .stars{display:flex;align-items:center}
+  .star{font-size:33px;line-height:1;cursor:pointer;color:var(--ink-4);padding:5px 6px;margin:-3px 0;
+    transition:transform .08s,color .12s;user-select:none;-webkit-text-stroke:1.4px var(--gold-dim)}
+  .star.on{color:var(--gold);-webkit-text-stroke:0}
+  .star:active{transform:scale(1.2)}
+  .star:focus-visible{outline:2px solid var(--rust);outline-offset:2px;border-radius:6px}
+  .catscore{margin-left:auto;font-family:var(--mono);font-size:13px;color:var(--bone-dim);font-weight:600}
+
+  .notes-wrap{margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
+  .notes-wrap label{font-family:var(--mono);font-size:10px;letter-spacing:0.18em;text-transform:uppercase;
+    color:var(--bone-dim);display:block;margin-bottom:8px}
+  textarea.notes{width:100%;min-height:104px;resize:vertical;background:var(--ink);color:var(--bone);
+    font-family:var(--serif);font-size:16px;line-height:1.5;border:1px solid var(--line-strong);
+    border-radius:12px;padding:13px}
+  textarea.notes::placeholder{color:var(--bone-faint);font-style:italic}
+  textarea.notes:focus-visible{outline:2px solid var(--rust);outline-offset:1px}
+
+  .summary-top{display:flex;gap:9px;margin-bottom:16px;flex-wrap:wrap}
+  .stat{flex:1;min-width:104px;background:var(--ink-2);border:1px solid var(--line);border-radius:12px;padding:13px}
+  .stat .k{font-family:var(--mono);font-size:9.5px;letter-spacing:0.14em;text-transform:uppercase;color:var(--bone-faint);margin-bottom:6px}
+  .stat .v{font-family:var(--serif);font-style:italic;font-size:20px;font-weight:500;line-height:1.1}
+  .stat .v small{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--bone-dim)}
+
+  .sorts{display:flex;gap:6px;margin-bottom:13px;align-items:center}
+  .sorts .lbl{font-family:var(--mono);font-size:9.5px;letter-spacing:0.14em;text-transform:uppercase;color:var(--bone-faint);margin-right:2px}
+  .chip{font-family:var(--mono);font-size:11px;font-weight:600;padding:8px 12px;border-radius:20px;
+    border:1px solid var(--line-strong);background:transparent;color:var(--bone-dim);cursor:pointer;min-height:36px}
+  .chip.on{background:var(--ink-4);color:var(--bone);border-color:var(--gold-dim)}
+  .chip:focus-visible{outline:2px solid var(--rust);outline-offset:2px}
+
+  .filmrow{background:linear-gradient(180deg,var(--ink-2),var(--ink));border:1px solid var(--line);
+    border-radius:14px;padding:15px 16px;margin-bottom:10px}
+  .filmrow-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+  .filmrow .ftitle{font-family:var(--serif);font-style:italic;font-weight:500;font-size:20px;line-height:1.1}
+  .filmrow .fdate{font-family:var(--mono);font-size:9.5px;letter-spacing:0.08em;text-transform:uppercase;color:var(--bone-faint);margin-top:4px}
+  .verdict{text-align:right;flex-shrink:0}
+  .verdict .vnum{font-family:var(--serif);font-style:italic;font-weight:600;font-size:30px;color:var(--gold);line-height:1}
+  .verdict .vnum.empty{color:var(--bone-faint);font-size:21px}
+  .verdict .vlbl{font-family:var(--mono);font-size:8.5px;letter-spacing:0.16em;text-transform:uppercase;color:var(--bone-faint);margin-top:3px}
+  .scorebars{display:flex;flex-direction:column;gap:9px;margin-top:13px}
+  .pscore{display:flex;align-items:center;gap:9px}
+  .pscore .who{font-family:var(--mono);font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--bone-dim);width:46px}
+  .meter{flex:1;height:7px;border-radius:6px;background:var(--ink-4);overflow:hidden}
+  .meter span{display:block;height:100%;border-radius:6px}
+  .meter span.chad{background:var(--rust)}
+  .meter span.joelle{background:var(--gold)}
+  .pscore .pnum{font-family:var(--mono);font-size:12px;font-weight:600;width:30px;text-align:right}
+  .pscore .pnum.none{color:var(--bone-faint);font-weight:400}
+  .twonotes{margin-top:12px;display:grid;gap:8px}
+  .qnote{background:var(--ink);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+  .qnote .qwho{font-family:var(--mono);font-size:9px;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:4px}
+  .qnote .qwho.c{color:var(--rust)} .qnote .qwho.j{color:var(--gold)}
+  .qnote .qtext{font-family:var(--serif);font-size:14.5px;line-height:1.45;color:var(--bone-dim)}
+  .filmrow-foot{display:flex;gap:7px;margin-top:13px;padding-top:12px;border-top:1px solid var(--line);justify-content:flex-end;flex-wrap:wrap}
+  .mini{font-family:var(--mono);font-size:11px;color:var(--bone-dim);background:transparent;
+    border:1px solid var(--line);border-radius:9px;padding:9px 12px;cursor:pointer;min-height:38px}
+  .mini.danger:active{color:#e88a6a;border-color:rgba(232,138,106,0.4)}
+  .mini:focus-visible{outline:2px solid var(--rust);outline-offset:2px}
+
+  .empty{text-align:center;padding:42px 18px;color:var(--bone-dim)}
+  .empty .big{font-family:var(--serif);font-style:italic;font-size:23px;color:var(--bone);margin-bottom:9px}
+  .empty .small{font-family:var(--mono);font-size:12px;letter-spacing:0.05em;line-height:1.7}
+
+  .syncline{text-align:center;margin-top:20px;font-family:var(--mono);font-size:9.5px;
+    letter-spacing:0.14em;text-transform:uppercase;color:var(--bone-faint)}
+
+  /* bottom tab bar */
+  .tabbar{position:fixed;left:0;right:0;bottom:0;z-index:20;
+    background:linear-gradient(180deg,rgba(24,18,14,0.86),rgba(24,18,14,0.98));
+    backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+    border-top:1px solid var(--line-strong);
+    padding-bottom:var(--safe-bottom)}
+  .tabbar-inner{max-width:680px;margin:0 auto;display:flex;height:var(--bar-h)}
+  .tabbtn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+    background:transparent;border:none;cursor:pointer;font-family:var(--mono);font-size:10.5px;
+    font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--bone-faint);
+    padding-top:8px;position:relative}
+  .tabbtn .glyph{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-family:var(--serif);font-style:italic;font-size:15px;font-weight:600;
+    border:1.5px solid var(--line-strong);color:var(--bone-faint);transition:all .15s}
+  .tabbtn.active{color:var(--bone)}
+  .tabbtn.active::before{content:"";position:absolute;top:0;width:30px;height:2.5px;border-radius:2px}
+  .tabbtn[data-tab="chad"].active{color:var(--bone)}
+  .tabbtn[data-tab="chad"].active::before{background:var(--rust)}
+  .tabbtn[data-tab="chad"].active .glyph{border-color:var(--rust);color:var(--rust);background:rgba(194,94,56,0.12)}
+  .tabbtn[data-tab="joelle"].active::before{background:var(--gold)}
+  .tabbtn[data-tab="joelle"].active .glyph{border-color:var(--gold);color:var(--gold);background:rgba(224,178,92,0.12)}
+  .tabbtn[data-tab="shared"].active::before{background:var(--bone)}
+  .tabbtn[data-tab="shared"].active .glyph{border-color:var(--bone);color:var(--bone)}
+  .tabbtn:focus-visible{outline:2px solid var(--rust);outline-offset:-4px}
+
+  /* save toast */
+  #toast{position:fixed;left:50%;transform:translateX(-50%) translateY(8px);
+    bottom:calc(var(--bar-h) + var(--safe-bottom) + 12px);z-index:30;
+    font-family:var(--mono);font-size:10.5px;letter-spacing:0.1em;text-transform:uppercase;
+    background:var(--ink-4);color:var(--gold);border:1px solid var(--line-strong);
+    padding:8px 14px;border-radius:20px;opacity:0;pointer-events:none;transition:opacity .35s,transform .35s}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  .loading{text-align:center;padding:64px 20px;font-family:var(--mono);font-size:12px;
+    letter-spacing:0.2em;text-transform:uppercase;color:var(--bone-faint)}
+</style>
+</head>
+<body>
+<div class="wrap" id="root"><div class="loading">Loading the reel…</div></div>
+<div id="toast"></div>
+
+<script>
+/* ================= Movie Club — Chad & Joelle =================
+   Storage: PUT/GET /api/data (Cloudflare KV) for cross-device sync,
+   mirrored to localStorage for instant + offline use. Falls back to
+   localStorage, then in-memory, if no backend is reachable.
+   ============================================================== */
+const API='/api/data';
+const LKEY='movieclub:data';
+const CATEGORIES=[
+  {key:'story', label:'Story',  desc:'plot · writing · pacing'},
+  {key:'acting',label:'Acting', desc:'performances · casting'},
+  {key:'vibe',  label:'Vibe',   desc:'overall enjoyment'},
+];
+const PEOPLE={chad:'Chad',joelle:'Joelle'};
+
+let data={movies:[]};
+let selectedId=null, activeTab='chad', sortMode='recent', newFormOpen=false;
+let saveTimer=null, source='memory';
+
+/* ---------- storage ---------- */
+function mirrorLocal(){ try{ localStorage.setItem(LKEY, JSON.stringify(data)); }catch(e){} }
+function readLocal(){ try{ const s=localStorage.getItem(LKEY); if(s){ const j=JSON.parse(s); if(j&&Array.isArray(j.movies)) return j; } }catch(e){} return null; }
+
+async function loadData(){
+  try{
+    const r=await fetch(API,{cache:'no-store'});
+    if(r.ok){ const j=await r.json(); if(j&&Array.isArray(j.movies)){ data=j; mirrorLocal(); source='server'; return; } }
+  }catch(e){}
+  const local=readLocal();
+  if(local){ data=local; source='local'; return; }
+  source='memory';
+}
+function scheduleSave(){ clearTimeout(saveTimer); saveTimer=setTimeout(saveData,450); }
+async function saveData(){
+  mirrorLocal();                       // instant + offline
+  if(source==='memory') return;
+  toast('Saving…');
+  try{
+    const r=await fetch(API,{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify(data)});
+    if(r.ok){ source='server'; toast('Saved & synced'); return; }
+    source='local'; toast('Saved on this iPhone');
+  }catch(e){ source='local'; toast('Saved offline'); }
+}
+let toastTimer=null;
+function toast(msg){
+  const el=document.getElementById('toast'); if(!el) return;
+  el.textContent=msg; el.classList.add('show');
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>el.classList.remove('show'),1600);
+}
+
+/* ---------- helpers ---------- */
+function uid(){ return 'm'+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+function getMovie(id){ return data.movies.find(m=>m.id===id)||null; }
+function blank(){ return {chad:{story:0,acting:0,vibe:0,notes:''},joelle:{story:0,acting:0,vibe:0,notes:''}}; }
+function personAvg(m,p){ const r=m.ratings[p]; const v=CATEGORIES.map(c=>r[c.key]).filter(x=>x>0); return v.length?v.reduce((a,b)=>a+b,0)/v.length:null; }
+function combinedAvg(m){ const a=[personAvg(m,'chad'),personAvg(m,'joelle')].filter(x=>x!==null); return a.length?a.reduce((x,y)=>x+y,0)/a.length:null; }
+function fmt(n){ return n===null?'—':(Math.round(n*10)/10).toFixed(1); }
+function esc(s){ return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+/* ---------- mutations ---------- */
+function addMovie(title,date){ const t=(title||'').trim(); if(!t) return;
+  const m={id:uid(),title:t,watched:date||'',ratings:blank()};
+  data.movies.unshift(m); selectedId=m.id; newFormOpen=false; scheduleSave(); render(); }
+function deleteMovie(id){ const m=getMovie(id); if(!m) return;
+  if(!confirm(`Remove "${m.title}" and both your ratings? This can't be undone.`)) return;
+  data.movies=data.movies.filter(x=>x.id!==id);
+  if(selectedId===id) selectedId=data.movies[0]?data.movies[0].id:null; scheduleSave(); render(); }
+function renameMovie(id){ const m=getMovie(id); if(!m) return;
+  const n=prompt('Movie title',m.title); if(n===null) return; const t=n.trim(); if(!t) return;
+  m.title=t; scheduleSave(); render(); }
+function setRating(id,p,cat,v){ const m=getMovie(id); if(!m) return;
+  m.ratings[p][cat]=(m.ratings[p][cat]===v)?0:v; scheduleSave(); render(); }
+function setNotes(id,p,text){ const m=getMovie(id); if(!m) return; m.ratings[p].notes=text; scheduleSave(); }
+
+/* ---------- render ---------- */
+function render(){
+  const root=document.getElementById('root');
+  if(!selectedId && data.movies.length) selectedId=data.movies[0].id;
+  root.innerHTML=`
+    <header class="app-head">
+      <div class="eyebrow">The Stewart Screening Room</div>
+      <h1 class="title">Movie&nbsp;Club</h1>
+      <div class="sub">Chad <span style="color:var(--gold)">+</span> Joelle · rated out of five</div>
+    </header>
+    <div class="marquee">
+      <span class="marquee-label">Now rating</span>
+      <div class="marquee-row">
+        ${data.movies.length?movieSelectHTML():`<div style="flex:1;display:flex;align-items:center;font-family:var(--serif);font-style:italic;color:var(--bone-faint);font-size:17px">No films logged yet</div>`}
+        <button class="btn btn-add" id="toggleNew">${newFormOpen?'Close':'＋'}</button>
+      </div>
+      <div class="newform ${newFormOpen?'open':''}">
+        <div class="field"><label>Movie title</label>
+          <input id="newTitle" type="text" placeholder="e.g. The Holdovers" autocomplete="off" enterkeyhint="done" /></div>
+        <div class="field"><label>Watched on (optional)</label><input id="newDate" type="date" /></div>
+        <button class="btn btn-add" id="saveNew" style="min-height:50px">Add film</button>
+      </div>
+    </div>
+    <section class="panel ${activeTab==='chad'?'active':''}">${personPanel('chad')}</section>
+    <section class="panel ${activeTab==='joelle'?'active':''}">${personPanel('joelle')}</section>
+    <section class="panel ${activeTab==='shared'?'active':''}">${sharedPanel()}</section>
+    <div class="syncline">${source==='server'?'Synced for both of you':source==='local'?'Saved on this iPhone':'Preview · not yet synced'}</div>
+    <nav class="tabbar"><div class="tabbar-inner">
+      <button class="tabbtn ${activeTab==='chad'?'active':''}" data-tab="chad"><span class="glyph">C</span>Chad</button>
+      <button class="tabbtn ${activeTab==='joelle'?'active':''}" data-tab="joelle"><span class="glyph">J</span>Joelle</button>
+      <button class="tabbtn ${activeTab==='shared'?'active':''}" data-tab="shared"><span class="glyph">★</span>Shared</button>
+    </div></nav>`;
+  wire();
+}
+function movieSelectHTML(){
+  const opts=data.movies.map(m=>{ const cv=combinedAvg(m); const tag=cv===null?'':`  ·  ${fmt(cv)}★`;
+    return `<option value="${m.id}" ${m.id===selectedId?'selected':''}>${esc(m.title)}${tag}</option>`; }).join('');
+  return `<select id="movieSelect" aria-label="Choose film to rate">${opts}</select>`;
+}
+function starsHTML(p,cat,val){ let s='';
+  for(let i=1;i<=5;i++) s+=`<span class="star ${i<=val?'on':''}" role="button" tabindex="0" aria-label="${cat} ${i} of 5" data-act="star" data-person="${p}" data-cat="${cat}" data-val="${i}">★</span>`;
+  return s; }
+function personPanel(p){
+  if(!data.movies.length) return `<div class="empty"><div class="big">Nothing on the bill yet</div><div class="small">Tap ＋ to add the first film<br>you watched together.</div></div>`;
+  const m=getMovie(selectedId); if(!m) return '';
+  const r=m.ratings[p], avg=personAvg(m,p);
+  const cats=CATEGORIES.map(c=>`<div class="cat"><div class="cat-head"><span class="cat-name">${c.label}</span><span class="cat-desc">${c.desc}</span></div>
+    <div class="stars">${starsHTML(p,c.key,r[c.key])}<span class="catscore">${r[c.key]?r[c.key]+'/5':'—'}</span></div></div>`).join('');
+  return `<div class="card"><div class="nowtitle">${esc(m.title)}</div>
+    <div class="nowmeta">${PEOPLE[p]}'s scorecard${avg!==null?`  ·  avg ${fmt(avg)}/5`:''}${m.watched?`  ·  ${esc(m.watched)}`:''}</div>
+    ${cats}
+    <div class="notes-wrap"><label for="notes-${p}">${PEOPLE[p]}'s notes</label>
+      <textarea class="notes" id="notes-${p}" data-person="${p}" placeholder="Best scene, gripes, who picked it…">${esc(r.notes)}</textarea></div></div>`;
+}
+function sharedPanel(){
+  if(!data.movies.length) return `<div class="empty"><div class="big">Your shared shelf is empty</div><div class="small">Once you've both rated a film,<br>the combined verdicts land here.</div></div>`;
+  const rated=data.movies.filter(m=>combinedAvg(m)!==null);
+  let top=null,split=null,gap=-1;
+  rated.forEach(m=>{ if(!top||combinedAvg(m)>combinedAvg(top)) top=m;
+    const c=personAvg(m,'chad'),j=personAvg(m,'joelle'); if(c!==null&&j!==null){ const g=Math.abs(c-j); if(g>gap){gap=g;split=m;} } });
+  const stats=`<div class="summary-top">
+    <div class="stat"><div class="k">Films logged</div><div class="v">${data.movies.length}</div></div>
+    <div class="stat"><div class="k">Top verdict</div><div class="v">${top?esc(top.title):'—'}${top?` <small>${fmt(combinedAvg(top))}</small>`:''}</div></div>
+    ${split?`<div class="stat"><div class="k">Biggest split</div><div class="v">${esc(split.title)} <small>Δ${fmt(gap)}</small></div></div>`:''}</div>`;
+  const sorted=[...data.movies];
+  if(sortMode==='top') sorted.sort((a,b)=>{ const av=combinedAvg(a),bv=combinedAvg(b);
+    if(av===null&&bv===null) return 0; if(av===null) return 1; if(bv===null) return -1; return bv-av; });
+  const sorts=`<div class="sorts"><span class="lbl">Sort</span>
+    <button class="chip ${sortMode==='recent'?'on':''}" data-sort="recent">Most recent</button>
+    <button class="chip ${sortMode==='top'?'on':''}" data-sort="top">Top rated</button></div>`;
+  const rows=sorted.map(m=>{ const c=personAvg(m,'chad'),j=personAvg(m,'joelle'),cv=combinedAvg(m);
+    const cn=m.ratings.chad.notes.trim(),jn=m.ratings.joelle.notes.trim();
+    const notes=(cn||jn)?`<div class="twonotes">${cn?`<div class="qnote"><div class="qwho c">Chad</div><div class="qtext">${esc(cn)}</div></div>`:''}${jn?`<div class="qnote"><div class="qwho j">Joelle</div><div class="qtext">${esc(jn)}</div></div>`:''}</div>`:'';
+    return `<div class="filmrow"><div class="filmrow-head"><div><div class="ftitle">${esc(m.title)}</div>${m.watched?`<div class="fdate">Watched ${esc(m.watched)}</div>`:''}</div>
+      <div class="verdict"><div class="vnum ${cv===null?'empty':''}">${fmt(cv)}</div><div class="vlbl">Shared verdict</div></div></div>
+      <div class="scorebars">
+        <div class="pscore"><span class="who">Chad</span><span class="meter"><span class="chad" style="width:${c?(c/5*100):0}%"></span></span><span class="pnum ${c===null?'none':''}">${fmt(c)}</span></div>
+        <div class="pscore"><span class="who">Joelle</span><span class="meter"><span class="joelle" style="width:${j?(j/5*100):0}%"></span></span><span class="pnum ${j===null?'none':''}">${fmt(j)}</span></div>
+      </div>${notes}
+      <div class="filmrow-foot"><button class="mini" data-act="rate" data-id="${m.id}">Open &amp; rate</button>
+        <button class="mini" data-act="rename" data-id="${m.id}">Rename</button>
+        <button class="mini danger" data-act="delete" data-id="${m.id}">Remove</button></div></div>`; }).join('');
+  return stats+sorts+rows;
+}
+
+/* ---------- events ---------- */
+function wire(){
+  const root=document.getElementById('root');
+  root.querySelectorAll('.tabbtn').forEach(t=>t.addEventListener('click',()=>{activeTab=t.dataset.tab;render();window.scrollTo({top:0,behavior:'smooth'});}));
+  const sel=document.getElementById('movieSelect');
+  if(sel) sel.addEventListener('change',e=>{selectedId=e.target.value;render();});
+  const tg=document.getElementById('toggleNew');
+  if(tg) tg.addEventListener('click',()=>{newFormOpen=!newFormOpen;render();if(newFormOpen)setTimeout(()=>document.getElementById('newTitle')?.focus(),40);});
+  const sn=document.getElementById('saveNew');
+  if(sn) sn.addEventListener('click',()=>addMovie(document.getElementById('newTitle').value,document.getElementById('newDate').value));
+  const nt=document.getElementById('newTitle');
+  if(nt) nt.addEventListener('keydown',e=>{if(e.key==='Enter')addMovie(e.target.value,document.getElementById('newDate').value);});
+  root.querySelectorAll('[data-act="star"]').forEach(s=>{
+    const fire=()=>setRating(selectedId,s.dataset.person,s.dataset.cat,+s.dataset.val);
+    s.addEventListener('click',fire);
+    s.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();fire();}});});
+  root.querySelectorAll('textarea.notes').forEach(ta=>ta.addEventListener('input',()=>setNotes(selectedId,ta.dataset.person,ta.value)));
+  root.querySelectorAll('[data-sort]').forEach(c=>c.addEventListener('click',()=>{sortMode=c.dataset.sort;render();}));
+  root.querySelectorAll('[data-act="rate"]').forEach(b=>b.addEventListener('click',()=>{selectedId=b.dataset.id;activeTab='chad';render();window.scrollTo({top:0,behavior:'smooth'});}));
+  root.querySelectorAll('[data-act="rename"]').forEach(b=>b.addEventListener('click',()=>renameMovie(b.dataset.id)));
+  root.querySelectorAll('[data-act="delete"]').forEach(b=>b.addEventListener('click',()=>deleteMovie(b.dataset.id)));
+}
+
+/* pull latest when returning to the app (other phone may have rated) */
+document.addEventListener('visibilitychange',async()=>{
+  if(document.visibilityState!=='visible'||source==='memory') return;
+  const ae=document.activeElement; if(ae&&/INPUT|TEXTAREA/.test(ae.tagName)) return;
+  try{ const r=await fetch(API,{cache:'no-store'}); if(r.ok){ const j=await r.json();
+    if(j&&Array.isArray(j.movies)){ data=j; mirrorLocal(); if(selectedId&&!getMovie(selectedId)) selectedId=data.movies[0]?.id||null; render(); } } }catch(e){}
+});
+
+/* boot */
+(async function(){ await loadData(); if(data.movies.length) selectedId=data.movies[0].id; render();
+  if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{}); })();
+</script>
+</body>
+</html>
