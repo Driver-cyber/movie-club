@@ -268,6 +268,65 @@
     text-decoration:none;border:1px solid var(--line);border-radius:20px;padding:8px 15px;display:inline-block}
   .guidelink:active{color:var(--bone)}
 
+  /* sort / filter controls */
+  .controls{margin-bottom:14px;display:flex;flex-direction:column;gap:9px}
+  .ctl-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  .ctl-lbl{font-family:var(--mono);font-size:9.5px;letter-spacing:0.14em;text-transform:uppercase;color:var(--bone-faint);margin-right:2px}
+  .ctl-genre{appearance:none;-webkit-appearance:none;background:var(--ink-3);color:var(--bone);font-family:var(--mono);
+    font-size:11px;font-weight:600;border:1px solid var(--line-strong);border-radius:20px;padding:8px 12px;min-height:36px;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23a4937c' stroke-width='2'><path d='M6 9l6 6 6-6'/></svg>");
+    background-repeat:no-repeat;background-position:right 9px center;padding-right:28px}
+
+  /* library cards (person tabs + watch list) */
+  .lib{display:flex;flex-direction:column;gap:10px}
+  .nomatch{text-align:center;font-family:var(--mono);font-size:11px;color:var(--bone-faint);padding:28px 10px;letter-spacing:0.05em}
+  .libcard{display:flex;gap:13px;width:100%;text-align:left;cursor:pointer;
+    background:linear-gradient(180deg,var(--ink-2),var(--ink));border:1px solid var(--line);border-radius:14px;padding:13px}
+  .libcard:active{border-color:var(--line-strong)}
+  .libposter{width:52px;height:78px;border-radius:8px;object-fit:cover;flex-shrink:0;background:var(--ink-3);
+    border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:22px}
+  .libmain{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
+  .libtitle{font-family:var(--serif);font-style:italic;font-weight:500;font-size:19px;line-height:1.1;color:var(--bone)}
+  .libmeta{font-family:var(--mono);font-size:9.5px;letter-spacing:0.06em;text-transform:uppercase;color:var(--bone-faint)}
+  .libstatus{display:flex;align-items:center;gap:8px;margin-top:1px}
+  .libstatus .mine{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--bone-dim)}
+  .libstatus .tbr{font-family:var(--mono);font-size:9px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;
+    color:var(--rust);background:rgba(194,94,56,0.12);border:1px solid var(--rust-soft);border-radius:14px;padding:3px 8px}
+  .libright{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:1px;flex-shrink:0;width:54px}
+  .libnum{font-family:var(--serif);font-style:italic;font-weight:600;font-size:26px;color:var(--gold);line-height:1}
+  .libnum.empty{color:var(--bone-faint);font-size:18px}
+  .libnlbl{font-family:var(--mono);font-size:7px;letter-spacing:0.14em;text-transform:uppercase;color:var(--bone-faint)}
+  .heart{margin-top:8px;font-size:20px;line-height:1;color:var(--bone-faint);cursor:pointer;padding:2px}
+  .heart.on{color:var(--rust)}
+  .tvbadge{display:inline-block;font-family:var(--mono);font-size:8px;font-weight:600;letter-spacing:0.1em;
+    color:var(--ink);background:var(--bone-dim);border-radius:4px;padding:2px 5px;vertical-align:middle}
+  .favmark{color:var(--rust)}
+
+  /* edit bar + recommend */
+  .editbar{display:flex;gap:8px;margin-bottom:12px}
+  .editbar:last-child{margin-bottom:0;margin-top:12px}
+  .rec-wrap{padding:14px 0;border-top:1px solid var(--line)}
+  .rec-wrap label{font-family:var(--mono);font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--bone-dim);display:block;margin-bottom:9px}
+  .recbtns{display:flex;gap:9px}
+  .recbtn{flex:1;font-family:var(--mono);font-size:13px;font-weight:600;background:var(--ink);color:var(--bone-dim);
+    border:1px solid var(--line-strong);border-radius:11px;padding:12px;cursor:pointer;min-height:46px}
+  .recbtn.on.yes{background:rgba(122,160,90,0.18);border-color:#7a9a5a;color:var(--bone)}
+  .recbtn.on.no{background:rgba(194,94,56,0.16);border-color:var(--rust-soft);color:var(--bone)}
+  .heart-chip.on{color:var(--rust);border-color:var(--rust-soft);background:rgba(194,94,56,0.10)}
+
+  /* watch list */
+  .listintro{margin-bottom:14px}
+  .li-h{font-family:var(--mono);font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:var(--gold);margin-bottom:7px}
+  .li-p{font-family:var(--serif);font-size:14.5px;line-height:1.5;color:var(--bone-dim)}
+  .wlcard{cursor:default}
+  .wlrow{margin-top:2px}
+  .wlservice{appearance:none;-webkit-appearance:none;background:var(--ink-3);color:var(--bone);font-family:var(--mono);
+    font-size:11px;font-weight:600;border:1px solid var(--line-strong);border-radius:9px;padding:8px 10px;width:100%;min-height:38px;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23a4937c' stroke-width='2'><path d='M6 9l6 6 6-6'/></svg>");
+    background-repeat:no-repeat;background-position:right 9px center;padding-right:28px}
+  .gchip.vibe{color:var(--bone);border-color:var(--gold-dim);background:rgba(224,178,92,0.07)}
+  .wlacts{display:flex;gap:7px;margin-top:4px;flex-wrap:wrap}
+
   /* bottom tab bar */
   .tabbar{position:fixed;left:0;right:0;bottom:0;z-index:20;
     background:linear-gradient(180deg,rgba(24,18,14,0.86),rgba(24,18,14,0.98));
@@ -291,6 +350,10 @@
   .tabbtn[data-tab="joelle"].active .glyph{border-color:var(--gold);color:var(--gold);background:rgba(224,178,92,0.12)}
   .tabbtn[data-tab="shared"].active::before{background:var(--bone)}
   .tabbtn[data-tab="shared"].active .glyph{border-color:var(--bone);color:var(--bone)}
+  .tabbtn[data-tab="list"].active::before{background:var(--rust-soft)}
+  .tabbtn[data-tab="list"].active .glyph{border-color:var(--rust-soft);color:var(--rust-soft);background:rgba(168,81,47,0.14)}
+  .tabbtn[data-tab="list"].active{color:var(--bone)}
+  .tabbtn .glyph{font-size:14px}
   .tabbtn:focus-visible{outline:2px solid var(--rust);outline-offset:-4px}
 
   /* save toast */
@@ -345,8 +408,12 @@ const PRED_WORDS=['Not rated','Totally predictable','Predictable','Even odds','S
 
 let data={movies:[]};
 let selectedId=null, activeTab='chad', sortMode='recent', newFormOpen=false;
+let genreFilter='all', typeFilter='all', listView=true;
+let wlService='all', wlTag='all';
 let saveTimer=null, source='memory', syncBox='';
-let suggTimer=null, suggList=[], pendingPick=null, pendingCover=null;
+let suggTimer=null, suggList=[], pendingPick=null, pendingCover=null, pendingType='movie';
+const MAX_FAV=8;
+const SERVICES=['Netflix','Prime Video','Apple TV+','Disney+','Max','Hulu','Peacock','Paramount+','In theaters','Rent/Buy','Other'];
 
 /* ---------- storage ---------- */
 function mirrorLocal(){ try{ localStorage.setItem(LKEY, JSON.stringify(data)); }catch(e){} }
@@ -414,7 +481,7 @@ function toast(msg){
 /* ---------- helpers ---------- */
 function uid(){ return 'm'+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
 function getMovie(id){ return data.movies.find(m=>m.id===id)||null; }
-function blankPerson(){ const o={notes:''}; CATEGORIES.forEach(c=>o[c.key]=0); return o; }
+function blankPerson(){ const o={notes:'',recommend:null}; CATEGORIES.forEach(c=>o[c.key]=0); return o; }
 function blank(){ return {chad:blankPerson(),joelle:blankPerson()}; }
 function normalize(){
   if(!data||!Array.isArray(data.movies)){ data={movies:[]}; return; }
@@ -422,12 +489,16 @@ function normalize(){
     if(typeof m.poster!=='string') m.poster='';
     if(typeof m.year!=='string') m.year='';
     if(typeof m.genre!=='string') m.genre='';
+    if(m.type!=='tv') m.type='movie';
+    if(typeof m.fav!=='boolean') m.fav=false;
+    if(typeof m.created!=='number') m.created=0;
     if(typeof m.includeGuests!=='boolean') m.includeGuests=false;
     if(!m.ratings||typeof m.ratings!=='object') m.ratings=blank();
     Object.keys(PEOPLE).forEach(p=>{
       const r=m.ratings[p]||(m.ratings[p]=blankPerson());
       CATEGORIES.forEach(c=>{ if(typeof r[c.key]!=='number') r[c.key]=0; });
       if(typeof r.notes!=='string') r.notes='';
+      if(r.recommend!==true&&r.recommend!==false) r.recommend=null;
     });
     if(!Array.isArray(m.guests)) m.guests=[];
     m.guests=m.guests.slice(0,3);
@@ -438,6 +509,13 @@ function normalize(){
       CATEGORIES.forEach(c=>{ if(typeof g.ratings[c.key]!=='number') g.ratings[c.key]=0; });
       if(typeof g.ratings.notes!=='string') g.ratings.notes='';
     });
+  });
+  if(!Array.isArray(data.watchlist)) data.watchlist=[];
+  data.watchlist.forEach(w=>{
+    if(typeof w.id!=='string') w.id='w'+Math.random().toString(36).slice(2,7);
+    ['title','year','genre','poster','service','vibe'].forEach(k=>{ if(typeof w[k]!=='string') w[k]=''; });
+    if(w.type!=='tv') w.type='movie';
+    if(typeof w.created!=='number') w.created=0;
   });
 }
 function avgOf(r){ if(!r) return null; let sum=0,wsum=0;
@@ -454,8 +532,54 @@ function esc(s){ return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>
 
 /* ---------- mutations ---------- */
 function addMovie(title,date,extra){ const t=(title||'').trim(); if(!t) return;
-  const m={id:uid(),title:t,watched:date||'',year:(extra&&extra.year)||'',genre:(extra&&extra.genre)||'',poster:(extra&&extra.poster)||'',ratings:blank()};
-  data.movies.unshift(m); selectedId=m.id; newFormOpen=false; pendingPick=null; pendingCover=null; scheduleSave(); render(); }
+  const e=extra||{};
+  const m={id:uid(),title:t,type:(e.type==='tv'?'tv':'movie'),watched:date||'',year:e.year||'',genre:e.genre||'',poster:e.poster||'',fav:false,created:Date.now(),includeGuests:false,ratings:blank(),guests:[]};
+  data.movies.unshift(m); selectedId=m.id; newFormOpen=false; listView=false; pendingPick=null; pendingCover=null; pendingType='movie'; scheduleSave(); render(); window.scrollTo({top:0,behavior:'smooth'}); }
+function toggleFav(id){ const m=getMovie(id); if(!m) return;
+  if(!m.fav && favCount()>=MAX_FAV){ toast(`Top ${MAX_FAV} is full — unheart one first`); return; }
+  m.fav=!m.fav; scheduleSave(); render(); }
+function favCount(){ return data.movies.filter(m=>m.fav).length; }
+function setRecommend(id,p,val){ const m=getMovie(id); if(!m) return;
+  m.ratings[p].recommend=(m.ratings[p].recommend===val)?null:val; scheduleSave(); render(); }
+function openEdit(id){ selectedId=id; listView=false; render(); window.scrollTo({top:0,behavior:'smooth'}); }
+function closeEdit(){ clearTimeout(saveTimer); saveData(); listView=true; render(); window.scrollTo({top:0,behavior:'smooth'}); }
+
+/* ---------- sort + filter (shared by libraries) ---------- */
+function whenKey(m){ const w=m.watched?Date.parse(m.watched):NaN; return isNaN(w)?(m.created||0):w; }
+function genreList(){ const s=new Set(); data.movies.forEach(m=>{ if(m.genre) s.add(m.genre); }); return [...s].sort(); }
+function visibleMovies(){
+  let arr=data.movies.slice();
+  if(typeFilter!=='all') arr=arr.filter(m=>(m.type||'movie')===typeFilter);
+  if(genreFilter!=='all') arr=arr.filter(m=>(m.genre||'')===genreFilter);
+  const byVerdict=(a,b,dir)=>{ const av=combinedAvg(a),bv=combinedAvg(b);
+    if(av===null&&bv===null) return 0; if(av===null) return 1; if(bv===null) return -1; return dir*(bv-av); };
+  if(sortMode==='top') arr.sort((a,b)=>byVerdict(a,b,1));
+  else if(sortMode==='low') arr.sort((a,b)=>byVerdict(a,b,-1));
+  else if(sortMode==='oldest') arr.sort((a,b)=>whenKey(a)-whenKey(b));
+  else arr.sort((a,b)=>whenKey(b)-whenKey(a)); // recent
+  return arr;
+}
+function controlsHTML(){
+  const gl=genreList();
+  const genreSel=`<select class="ctl-genre" id="genreFilter" aria-label="Filter by genre">
+      <option value="all"${genreFilter==='all'?' selected':''}>All genres</option>
+      ${gl.map(g=>`<option value="${esc(g)}"${genreFilter===g?' selected':''}>${esc(g)}</option>`).join('')}
+    </select>`;
+  return `<div class="controls">
+    <div class="ctl-row"><span class="ctl-lbl">Sort</span>
+      <button class="chip ${sortMode==='recent'?'on':''}" data-sort="recent">Newest</button>
+      <button class="chip ${sortMode==='oldest'?'on':''}" data-sort="oldest">Oldest</button>
+      <button class="chip ${sortMode==='top'?'on':''}" data-sort="top">Highest</button>
+      <button class="chip ${sortMode==='low'?'on':''}" data-sort="low">Lowest</button>
+    </div>
+    <div class="ctl-row"><span class="ctl-lbl">Show</span>
+      <button class="chip ${typeFilter==='all'?'on':''}" data-type="all">All</button>
+      <button class="chip ${typeFilter==='movie'?'on':''}" data-type="movie">Films</button>
+      <button class="chip ${typeFilter==='tv'?'on':''}" data-type="tv">TV</button>
+      ${genreSel}
+    </div>
+  </div>`;
+}
 function deleteMovie(id){ const m=getMovie(id); if(!m) return;
   if(!confirm(`Remove "${m.title}" and both your ratings? This can't be undone.`)) return;
   data.movies=data.movies.filter(x=>x.id!==id);
@@ -496,6 +620,61 @@ function setRating(id,p,cat,v){ const m=getMovie(id); if(!m) return;
   m.ratings[p][cat]=(m.ratings[p][cat]===v)?0:v; scheduleSave(); render(); }
 function setNotes(id,p,text){ const m=getMovie(id); if(!m) return; m.ratings[p].notes=text; scheduleSave(); }
 
+/* ---------- watch list (shared, to-watch) ---------- */
+function addWatch(title,extra){ const t=(title||'').trim(); if(!t) return; const e=extra||{};
+  const w={id:'w'+Date.now().toString(36)+Math.random().toString(36).slice(2,4),title:t,type:(e.type==='tv'?'tv':'movie'),year:e.year||'',genre:e.genre||'',poster:e.poster||'',service:'',vibe:'',created:Date.now()};
+  if(!Array.isArray(data.watchlist)) data.watchlist=[];
+  data.watchlist.unshift(w); newFormOpen=false; pendingPick=null; pendingCover=null; pendingType='movie'; scheduleSave(); render(); toast('Added to your list'); }
+function delWatch(id){ const w=(data.watchlist||[]).find(x=>x.id===id); if(!w) return;
+  if(!confirm(`Remove "${w.title}" from your watch list?`)) return;
+  data.watchlist=data.watchlist.filter(x=>x.id!==id); scheduleSave(); render(); }
+function setWLService(id,val){ const w=(data.watchlist||[]).find(x=>x.id===id); if(!w) return; w.service=val||''; scheduleSave(); render(); }
+function setWLVibe(id){ const w=(data.watchlist||[]).find(x=>x.id===id); if(!w) return;
+  const v=prompt('Vibe / tag (e.g. cozy, date night, mind-bender)', w.vibe||''); if(v===null) return; w.vibe=v.trim(); scheduleSave(); render(); }
+function watchToLibrary(id){ const w=(data.watchlist||[]).find(x=>x.id===id); if(!w) return;
+  data.watchlist=data.watchlist.filter(x=>x.id!==id); activeTab='chad';
+  addMovie(w.title,'',{type:w.type,year:w.year,genre:w.genre,poster:w.poster}); }
+function wlTagList(){ const s=new Set(); (data.watchlist||[]).forEach(w=>{ if(w.genre) s.add(w.genre); if(w.vibe) s.add(w.vibe); }); return [...s].sort(); }
+function visibleWatch(){ let arr=(data.watchlist||[]).slice();
+  if(wlService!=='all') arr=arr.filter(w=>w.service===wlService);
+  if(wlTag!=='all') arr=arr.filter(w=>w.genre===wlTag||w.vibe===wlTag);
+  arr.sort((a,b)=>(b.created||0)-(a.created||0)); return arr; }
+function listControlsHTML(){
+  const svc=new Set(); (data.watchlist||[]).forEach(w=>{ if(w.service) svc.add(w.service); });
+  const svcChips=['all',...[...svc].sort()].map(s=>`<button class="chip ${wlService===s?'on':''}" data-wlsvc="${esc(s)}">${s==='all'?'All':esc(s)}</button>`).join('');
+  const tags=wlTagList();
+  const tagSel=`<select class="ctl-genre" id="wlTagFilter" aria-label="Filter by tag">
+      <option value="all"${wlTag==='all'?' selected':''}>All tags</option>
+      ${tags.map(g=>`<option value="${esc(g)}"${wlTag===g?' selected':''}>${esc(g)}</option>`).join('')}
+    </select>`;
+  return `<div class="controls">
+    <div class="ctl-row"><span class="ctl-lbl">Where</span>${svcChips}</div>
+    <div class="ctl-row"><span class="ctl-lbl">Tag</span>${tagSel}</div>
+  </div>`;
+}
+function watchCardHTML(w){
+  const svcOpts=['',...SERVICES].map(s=>`<option value="${esc(s)}"${w.service===s?' selected':''}>${s||'＋ where to watch'}</option>`).join('');
+  return `<div class="libcard wlcard">
+    ${w.poster?`<img class="libposter" src="${esc(w.poster)}" alt="" loading="lazy" />`:`<div class="libposter ph">🎬</div>`}
+    <div class="libmain"><div class="libtitle">${esc(w.title)}</div>
+      ${w.year?`<div class="libmeta">${esc(w.year)}</div>`:''}
+      <div class="gtags">${w.type==='tv'?'<span class="tvbadge">TV</span>':''}${w.genre?`<span class="gchip">${esc(w.genre)}</span>`:''}${w.vibe?`<button class="gchip vibe" data-act="wlvibe" data-id="${w.id}">${esc(w.vibe)}</button>`:`<button class="gchip empty" data-act="wlvibe" data-id="${w.id}">＋ vibe</button>`}</div>
+      <div class="wlrow"><select class="wlservice" data-act="wlservice" data-id="${w.id}" aria-label="Streaming service">${svcOpts}</select></div>
+      <div class="wlacts">
+        <button class="mini" data-act="wlwatched" data-id="${w.id}">✓ Watched → rate</button>
+        <button class="mini danger" data-act="wldel" data-id="${w.id}">Remove</button>
+      </div>
+    </div></div>`;
+}
+function listPanel(){
+  const wl=data.watchlist||[];
+  const intro=`<div class="listintro"><div class="li-h">Your watch list</div><div class="li-p">Films &amp; shows you both want to get to. Tap ＋ to add, set where it's streaming and a vibe, then "Watched → rate" once you've seen it.</div></div>`;
+  if(!wl.length) return intro+`<div class="empty"><div class="big">Nothing on the list yet</div><div class="small">Add something you want<br>to watch together.</div></div>`;
+  const vis=visibleWatch();
+  const body=vis.length?vis.map(watchCardHTML).join(''):`<div class="nomatch">Nothing matches these filters.</div>`;
+  return intro+listControlsHTML()+`<div class="lib">${body}</div>`;
+}
+
 /* ---------- render ---------- */
 function render(){
   const root=document.getElementById('root');
@@ -507,33 +686,38 @@ function render(){
       <div class="sub">Chad <span style="color:var(--gold)">+</span> Joelle · rated out of five</div>
     </header>
     <div class="marquee">
-      <span class="marquee-label">Now rating</span>
       <div class="marquee-row">
-        ${data.movies.length?movieSelectHTML():`<div style="flex:1;display:flex;align-items:center;font-family:var(--serif);font-style:italic;color:var(--bone-faint);font-size:17px">No films logged yet</div>`}
-        <button class="btn btn-add" id="toggleNew">${newFormOpen?'Close':'＋'}</button>
+        <button class="btn btn-add" id="toggleNew" style="flex:1;min-height:50px">${newFormOpen?'Close':(activeTab==='list'?'＋  Add to your list':'＋  Add a film or show')}</button>
       </div>
       <div class="newform ${newFormOpen?'open':''}">
-        <div class="field"><label>Movie title</label>
+        <div class="field"><label>Title</label>
           <div class="ac-wrap">
-            <input id="newTitle" type="text" placeholder="Start typing a title…" autocomplete="off" enterkeyhint="done" />
-            <div id="suggBox" class="suggbox" role="listbox" aria-label="Movie suggestions"></div>
+            <input id="newTitle" type="text" placeholder="Start typing a film or show…" autocomplete="off" enterkeyhint="done" />
+            <div id="suggBox" class="suggbox" role="listbox" aria-label="Suggestions"></div>
           </div>
         </div>
         <div id="pickPreview" class="pickprev" hidden></div>
+        <div class="field"><label>Type</label>
+          <div class="typetoggle">
+            <button type="button" class="chip ${pendingType==='movie'?'on':''}" data-newtype="movie">🎬 Film</button>
+            <button type="button" class="chip ${pendingType==='tv'?'on':''}" data-newtype="tv">📺 TV show</button>
+          </div></div>
         <button class="btn" id="uploadCover" type="button" style="min-height:44px">⤒ Upload cover image (optional)</button>
-        <div class="field"><label>Watched on (optional)</label><input id="newDate" type="date" /></div>
-        <button class="btn btn-add" id="saveNew" style="min-height:50px">Add film</button>
+        ${activeTab==='list'?'':`<div class="field"><label>Watched on (optional)</label><input id="newDate" type="date" /></div>`}
+        <button class="btn btn-add" id="saveNew" style="min-height:50px">${activeTab==='list'?'Add to list':'Add to library'}</button>
       </div>
     </div>
     <section class="panel ${activeTab==='chad'?'active':''}">${personPanel('chad')}</section>
     <section class="panel ${activeTab==='joelle'?'active':''}">${personPanel('joelle')}</section>
     <section class="panel ${activeTab==='shared'?'active':''}">${sharedPanel()}</section>
+    <section class="panel ${activeTab==='list'?'active':''}">${listPanel()}</section>
     <div class="syncline">${source==='server'?'Synced for both of you':source==='local'?'Saved on this iPhone':'Preview · not yet synced'}</div>
     <div class="guideline"><a class="guidelink" href="/guide.html">❓ How to use Movie Club</a></div>
     <nav class="tabbar"><div class="tabbar-inner">
       <button class="tabbtn ${activeTab==='chad'?'active':''}" data-tab="chad"><span class="glyph">C</span>Chad</button>
       <button class="tabbtn ${activeTab==='joelle'?'active':''}" data-tab="joelle"><span class="glyph">J</span>Joelle</button>
       <button class="tabbtn ${activeTab==='shared'?'active':''}" data-tab="shared"><span class="glyph">★</span>Shared</button>
+      <button class="tabbtn ${activeTab==='list'?'active':''}" data-tab="list"><span class="glyph">✚</span>List</button>
     </div></nav>`;
   wire();
 }
@@ -562,27 +746,61 @@ function sliderCatHTML(p,c,val){
   </div>`;
 }
 function posterHTML(m,cls,ph){ return m.poster?`<img class="${cls}" src="${esc(m.poster)}" alt="" loading="lazy" />`:`<div class="${cls} ph">${ph}</div>`; }
+function typeBadge(m){ return (m.type==='tv')?`<span class="tvbadge">TV</span>`:''; }
 function personPanel(p){
-  if(!data.movies.length) return `<div class="empty"><div class="big">Nothing on the bill yet</div><div class="small">Tap ＋ to add the first film<br>you watched together.</div></div>`;
-  const m=getMovie(selectedId); if(!m) return '';
-  const r=m.ratings[p], avg=personAvg(m,p);
+  if(!data.movies.length) return `<div class="empty"><div class="big">Nothing logged yet</div><div class="small">Tap ＋ above to add the<br>first film or show.</div></div>`;
+  if(listView || !getMovie(selectedId)) return libraryHTML(p);
+  return detailHTML(p,getMovie(selectedId));
+}
+function libraryHTML(p){
+  const list=visibleMovies();
+  const body=list.length?list.map(m=>summaryCardHTML(m,p)).join('')
+    :`<div class="nomatch">Nothing matches these filters.</div>`;
+  return controlsHTML()+`<div class="lib">${body}</div>`;
+}
+function summaryCardHTML(m,p){
+  const cv=combinedAvg(m), mine=personAvg(m,p), rec=m.ratings[p].recommend;
+  const metaBits=[m.year&&esc(m.year), m.watched&&('seen '+esc(m.watched))].filter(Boolean).join(' · ');
+  const status=mine!==null?`<span class="mine">You ${fmt(mine)}</span>`:`<span class="tbr">TBR · to rate</span>`;
+  const recIco=rec===true?'<span class="recyes">👍</span>':rec===false?'<span class="recno">👎</span>':'';
+  return `<button class="libcard" data-act="open" data-id="${m.id}">
+    ${posterHTML(m,'libposter','🎬')}
+    <div class="libmain"><div class="libtitle">${esc(m.title)}</div>
+      ${metaBits?`<div class="libmeta">${metaBits}</div>`:''}
+      <div class="gtags">${typeBadge(m)}${m.genre?`<span class="gchip">${esc(m.genre)}</span>`:''}</div>
+      <div class="libstatus">${status}${recIco}</div></div>
+    <div class="libright">
+      <div class="libnum ${cv===null?'empty':''}">${fmt(cv)}</div>
+      <div class="libnlbl">${m.includeGuests?'everyone':'verdict'}</div>
+      <span class="heart ${m.fav?'on':''}" data-act="fav" data-id="${m.id}" role="button" tabindex="0" aria-label="Top ${MAX_FAV}">${m.fav?'♥':'♡'}</span>
+    </div></button>`;
+}
+function detailHTML(p,m){
+  const r=m.ratings[p], avg=personAvg(m,p), rec=r.recommend;
   const cats=CATEGORIES.map(c=> c.type==='slider' ? sliderCatHTML(p,c,r[c.key]) : starCatHTML(p,c,r[c.key]) ).join('');
-  return `<div class="card">
+  const closeBar=`<div class="editbar"><button class="btn" data-act="back" style="min-height:46px">‹ Library</button><button class="btn btn-add" data-act="closeedit" style="flex:1;min-height:46px">✓ Save &amp; close</button></div>`;
+  const recHTML=`<div class="rec-wrap"><label>Would you recommend it to a friend?</label>
+    <div class="recbtns">
+      <button class="recbtn ${rec===true?'on yes':''}" data-act="rec" data-person="${p}" data-id="${m.id}" data-val="1">👍 Yes</button>
+      <button class="recbtn ${rec===false?'on no':''}" data-act="rec" data-person="${p}" data-id="${m.id}" data-val="0">👎 No</button>
+    </div></div>`;
+  return closeBar+`<div class="card">
     <div class="nowhead">${posterHTML(m,'nowposter','🎬')}
-      <div><div class="nowtitle">${esc(m.title)}</div>
+      <div><div class="nowtitle">${esc(m.title)} ${typeBadge(m)}</div>
         <div class="nowmeta">${PEOPLE[p]}'s scorecard${avg!==null?`  ·  avg ${fmt(avg)}/5`:''}${m.year?`  ·  ${esc(m.year)}`:''}${m.watched?`  ·  seen ${esc(m.watched)}`:''}</div>
-        <div class="gtags"><button class="gchip ${m.genre?'':'empty'}" data-act="genre" data-id="${m.id}">${m.genre?esc(m.genre):'＋ Genre'}</button></div></div>
+        <div class="gtags"><button class="gchip ${m.genre?'':'empty'}" data-act="genre" data-id="${m.id}">${m.genre?esc(m.genre):'＋ Genre'}</button>
+          <button class="gchip heart-chip ${m.fav?'on':''}" data-act="fav" data-id="${m.id}">${m.fav?'♥ Top 8':'♡ Add to Top 8'}</button></div></div>
     </div>
     ${cats}
+    ${recHTML}
     <div class="notes-wrap"><label for="notes-${p}">${PEOPLE[p]}'s notes</label>
       <textarea class="notes" id="notes-${p}" data-person="${p}" placeholder="Best scene, gripes, who picked it…">${esc(r.notes)}</textarea></div>
     ${guestSectionHTML(m)}
     <div class="card-foot">
       <button class="mini" data-act="rename" data-id="${m.id}">Rename</button>
-      <button class="mini" data-act="genre" data-id="${m.id}">Edit genre</button>
       <button class="mini" data-act="cover" data-id="${m.id}">${m.poster?'Change cover':'Add cover'}</button>
-      <button class="mini danger" data-act="delete" data-id="${m.id}">Remove film</button>
-    </div></div>`;
+      <button class="mini danger" data-act="delete" data-id="${m.id}">Remove</button>
+    </div></div>`+closeBar;
 }
 function guestSectionHTML(m){
   const guests=m.guests||[];
@@ -611,17 +829,14 @@ function sharedPanel(){
     <div class="stat"><div class="k">Films logged</div><div class="v">${data.movies.length}</div></div>
     <div class="stat"><div class="k">Top verdict</div><div class="v">${top?esc(top.title):'—'}${top?` <small>${fmt(combinedAvg(top))}</small>`:''}</div></div>
     ${split?`<div class="stat"><div class="k">Biggest split</div><div class="v">${esc(split.title)} <small>Δ${fmt(gap)}</small></div></div>`:''}</div>`;
-  const sorted=[...data.movies];
-  if(sortMode==='top') sorted.sort((a,b)=>{ const av=combinedAvg(a),bv=combinedAvg(b);
-    if(av===null&&bv===null) return 0; if(av===null) return 1; if(bv===null) return -1; return bv-av; });
-  const sorts=`<div class="sorts"><span class="lbl">Sort</span>
-    <button class="chip ${sortMode==='recent'?'on':''}" data-sort="recent">Most recent</button>
-    <button class="chip ${sortMode==='top'?'on':''}" data-sort="top">Top rated</button></div>`;
-  const rows=sorted.map(m=>{ const c=personAvg(m,'chad'),j=personAvg(m,'joelle'),cv=combinedAvg(m);
+  const rows=visibleMovies().map(m=>{ const c=personAvg(m,'chad'),j=personAvg(m,'joelle'),cv=combinedAvg(m);
     const cn=m.ratings.chad.notes.trim(),jn=m.ratings.joelle.notes.trim();
     const cp=m.ratings.chad.predictability,jp=m.ratings.joelle.predictability;
     const ratedGuests=(m.guests||[]).filter(g=>guestAvg(g)!==null);
     const predline=(cp||jp)?`<div class="predline"><span class="pl-k">Predictability</span>${cp?`Chad <b>${PRED_WORDS[cp]}</b>`:''}${cp&&jp?'  ·  ':''}${jp?`Joelle <b>${PRED_WORDS[jp]}</b>`:''}</div>`:'';
+    const recs=[]; if(m.ratings.chad.recommend!==null) recs.push(`Chad ${m.ratings.chad.recommend?'👍':'👎'}`);
+    if(m.ratings.joelle.recommend!==null) recs.push(`Joelle ${m.ratings.joelle.recommend?'👍':'👎'}`);
+    const recline=recs.length?`<div class="predline"><span class="pl-k">Recommend</span>${recs.join('  ·  ')}</div>`:'';
     const guestBars=ratedGuests.map(g=>{ const ga=guestAvg(g);
       return `<div class="pscore"><span class="who" title="${esc(g.name||'Guest')}">${esc(firstName(g.name)||'Guest')}</span><span class="meter"><span class="guest" style="width:${ga/5*100}%"></span></span><span class="pnum">${fmt(ga)}</span></div>`; }).join('');
     let noteItems=[];
@@ -630,17 +845,17 @@ function sharedPanel(){
     (m.guests||[]).forEach(g=>{ const t=(g.ratings.notes||'').trim(); if(t) noteItems.push({who:g.name||'Guest',cls:'g',text:t}); });
     const notes=noteItems.length?`<div class="twonotes">${noteItems.map(it=>`<div class="qnote"><div class="qwho ${it.cls}">${esc(it.who)}</div><div class="qtext">${esc(it.text)}</div></div>`).join('')}</div>`:'';
     return `<div class="filmrow"><div class="filmrow-head">${m.poster?posterHTML(m,'frposter',''):''}
-      <div class="frmain"><div class="ftitle">${esc(m.title)}</div>${(m.year||m.watched)?`<div class="fdate">${m.year?esc(m.year):''}${m.year&&m.watched?' · ':''}${m.watched?`watched ${esc(m.watched)}`:''}</div>`:''}${m.genre?`<div class="gtags"><span class="gchip">${esc(m.genre)}</span></div>`:''}</div>
+      <div class="frmain"><div class="ftitle">${m.fav?'<span class="favmark">♥</span> ':''}${esc(m.title)}</div>${(m.year||m.watched)?`<div class="fdate">${m.year?esc(m.year):''}${m.year&&m.watched?' · ':''}${m.watched?`watched ${esc(m.watched)}`:''}</div>`:''}<div class="gtags">${typeBadge(m)}${m.genre?`<span class="gchip">${esc(m.genre)}</span>`:''}</div></div>
       <div class="verdict"><div class="vnum ${cv===null?'empty':''}">${fmt(cv)}</div><div class="vlbl">${m.includeGuests?"Everyone's verdict":'Shared verdict'}</div>${ratedGuests.length?`<button class="vtoggle ${m.includeGuests?'on':''}" data-act="vtoggle" data-id="${m.id}">${m.includeGuests?'✓ incl. guests':'＋ include guests'}</button>`:''}</div></div>
       <div class="scorebars">
         <div class="pscore"><span class="who">Chad</span><span class="meter"><span class="chad" style="width:${c?(c/5*100):0}%"></span></span><span class="pnum ${c===null?'none':''}">${fmt(c)}</span></div>
         <div class="pscore"><span class="who">Joelle</span><span class="meter"><span class="joelle" style="width:${j?(j/5*100):0}%"></span></span><span class="pnum ${j===null?'none':''}">${fmt(j)}</span></div>
         ${guestBars}
-      </div>${predline}${notes}
+      </div>${predline}${recline}${notes}
       <div class="filmrow-foot"><button class="mini" data-act="rate" data-id="${m.id}">Open &amp; rate</button>
         <button class="mini" data-act="rename" data-id="${m.id}">Rename</button>
         <button class="mini danger" data-act="delete" data-id="${m.id}">Remove</button></div></div>`; }).join('');
-  return stats+sorts+rows+syncToolsHTML()+dataToolsHTML();
+  return stats+controlsHTML()+(rows||`<div class="nomatch">Nothing matches these filters.</div>`)+syncToolsHTML()+dataToolsHTML();
 }
 
 /* ---------- title search / autocomplete ---------- */
@@ -668,18 +883,20 @@ function renderSuggest(list){
   box.innerHTML=list.map((m,i)=>{ const meta=[esc(m.year),esc(m.genre)].filter(Boolean).join(' · ');
     return `<button type="button" class="sugg" data-idx="${i}" role="option">
     ${m.poster?`<img class="sugg-img" src="${esc(m.poster)}" alt="" loading="lazy" />`:`<span class="sugg-img ph">🎞</span>`}
-    <span class="sugg-meta"><span class="sugg-title">${esc(m.title)}</span>${meta?`<span class="sugg-year">${meta}</span>`:''}</span>
+    <span class="sugg-meta"><span class="sugg-title">${esc(m.title)}${m.type==='tv'?' <span class="tvbadge">TV</span>':''}</span>${meta?`<span class="sugg-year">${meta}</span>`:''}</span>
   </button>`; }).join('');
   box.classList.add('open');
   box.querySelectorAll('.sugg').forEach(b=>b.addEventListener('click',()=>pickSuggest(+b.dataset.idx)));
 }
 function pickSuggest(i){
   const m=suggList[i]; if(!m) return;
-  pendingPick={title:m.title,year:m.year||'',genre:m.genre||'',poster:m.poster||''};
+  pendingPick={title:m.title,year:m.year||'',genre:m.genre||'',poster:m.poster||'',type:m.type||'movie'};
+  pendingType=m.type==='tv'?'tv':'movie';
   const nt=document.getElementById('newTitle'); if(nt) nt.value=m.title;
   const box=document.getElementById('suggBox'); if(box){ box.innerHTML=''; box.classList.remove('open'); }
-  updatePickPreview();
+  updatePickPreview(); updateTypeToggle();
 }
+function updateTypeToggle(){ document.querySelectorAll('[data-newtype]').forEach(b=>b.classList.toggle('on', b.dataset.newtype===pendingType)); }
 function updatePickPreview(){
   const el=document.getElementById('pickPreview'); if(!el) return;
   const nt=document.getElementById('newTitle');
@@ -694,9 +911,10 @@ function updatePickPreview(){
 function commitNew(){
   const nt=document.getElementById('newTitle'), nd=document.getElementById('newDate');
   const t=nt?nt.value:'', d=nd?nd.value:'';
-  let extra=(pendingPick&&pendingPick.title.toLowerCase()===t.trim().toLowerCase())?{...pendingPick}:null;
-  if(pendingCover){ extra=extra||{}; extra.poster=pendingCover; }
-  addMovie(t,d,extra);
+  let extra=(pendingPick&&pendingPick.title.toLowerCase()===t.trim().toLowerCase())?{...pendingPick}:{};
+  if(pendingCover) extra.poster=pendingCover;
+  extra.type=pendingType;
+  if(activeTab==='list') addWatch(t,extra); else addMovie(t,d,extra);
 }
 
 /* ---------- cover image upload ---------- */
@@ -737,10 +955,11 @@ function importData(){
   inp.onchange=()=>{ const f=inp.files&&inp.files[0]; if(!f) return;
     const reader=new FileReader();
     reader.onload=()=>{ let j; try{ j=JSON.parse(reader.result); }catch(e){ alert('Could not read that file — is it valid JSON?'); return; }
-      const movies = Array.isArray(j&&j.movies) ? j.movies : (j&&j.data&&Array.isArray(j.data.movies) ? j.data.movies : null);
-      if(!movies){ alert("That file doesn't look like a Movie Club backup."); return; }
-      if(data.movies.length && !confirm(`Replace your current ${data.movies.length} film(s) with ${movies.length} from this backup? This overwrites what's here.`)) return;
-      data={movies}; normalize(); selectedId=data.movies[0]?data.movies[0].id:null; scheduleSave(); render(); toast(`Imported ${movies.length} films`); };
+      const src = (j&&Array.isArray(j.movies)) ? j : (j&&j.data&&Array.isArray(j.data.movies) ? j.data : null);
+      if(!src){ alert("That file doesn't look like a Movie Club backup."); return; }
+      if(data.movies.length && !confirm(`Replace your current ${data.movies.length} film(s) with ${src.movies.length} from this backup? This overwrites what's here.`)) return;
+      data={movies:src.movies, watchlist:Array.isArray(src.watchlist)?src.watchlist:[]};
+      normalize(); selectedId=data.movies[0]?data.movies[0].id:null; listView=true; scheduleSave(); render(); toast(`Imported ${src.movies.length} films`); };
     reader.readAsText(f); };
   inp.click();
 }
@@ -776,7 +995,7 @@ function syncToolsHTML(){
 /* ---------- events ---------- */
 function wire(){
   const root=document.getElementById('root');
-  root.querySelectorAll('.tabbtn').forEach(t=>t.addEventListener('click',()=>{activeTab=t.dataset.tab;render();window.scrollTo({top:0,behavior:'smooth'});}));
+  root.querySelectorAll('.tabbtn').forEach(t=>t.addEventListener('click',()=>{activeTab=t.dataset.tab;listView=true;newFormOpen=false;render();window.scrollTo({top:0,behavior:'smooth'});}));
   const sel=document.getElementById('movieSelect');
   if(sel) sel.addEventListener('change',e=>{selectedId=e.target.value;render();});
   const tg=document.getElementById('toggleNew');
@@ -806,7 +1025,21 @@ function wire(){
     const m=getMovie(selectedId); if(!m) return; m.ratings[b.dataset.person][b.dataset.cat]=0; scheduleSave(); render(); }));
   root.querySelectorAll('textarea.notes').forEach(ta=>ta.addEventListener('input',()=>setNotes(selectedId,ta.dataset.person,ta.value)));
   root.querySelectorAll('[data-sort]').forEach(c=>c.addEventListener('click',()=>{sortMode=c.dataset.sort;render();}));
-  root.querySelectorAll('[data-act="rate"]').forEach(b=>b.addEventListener('click',()=>{selectedId=b.dataset.id;activeTab='chad';render();window.scrollTo({top:0,behavior:'smooth'});}));
+  root.querySelectorAll('[data-act="rate"]').forEach(b=>b.addEventListener('click',()=>{selectedId=b.dataset.id;activeTab='chad';listView=false;render();window.scrollTo({top:0,behavior:'smooth'});}));
+  root.querySelectorAll('[data-act="open"]').forEach(b=>b.addEventListener('click',()=>openEdit(b.dataset.id)));
+  root.querySelectorAll('[data-act="fav"]').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();toggleFav(b.dataset.id);}));
+  root.querySelectorAll('[data-act="closeedit"]').forEach(b=>b.addEventListener('click',closeEdit));
+  root.querySelectorAll('[data-act="back"]').forEach(b=>b.addEventListener('click',closeEdit));
+  root.querySelectorAll('[data-act="rec"]').forEach(b=>b.addEventListener('click',()=>setRecommend(b.dataset.id,b.dataset.person,b.dataset.val==='1')));
+  root.querySelectorAll('[data-newtype]').forEach(b=>b.addEventListener('click',()=>{pendingType=b.dataset.newtype;updateTypeToggle();}));
+  root.querySelectorAll('[data-type]').forEach(b=>b.addEventListener('click',()=>{typeFilter=b.dataset.type;render();}));
+  const gf=document.getElementById('genreFilter'); if(gf) gf.addEventListener('change',()=>{genreFilter=gf.value;render();});
+  root.querySelectorAll('[data-wlsvc]').forEach(b=>b.addEventListener('click',()=>{wlService=b.dataset.wlsvc;render();}));
+  const tf=document.getElementById('wlTagFilter'); if(tf) tf.addEventListener('change',()=>{wlTag=tf.value;render();});
+  root.querySelectorAll('[data-act="wlservice"]').forEach(s=>s.addEventListener('change',()=>setWLService(s.dataset.id,s.value)));
+  root.querySelectorAll('[data-act="wlvibe"]').forEach(b=>b.addEventListener('click',()=>setWLVibe(b.dataset.id)));
+  root.querySelectorAll('[data-act="wlwatched"]').forEach(b=>b.addEventListener('click',()=>watchToLibrary(b.dataset.id)));
+  root.querySelectorAll('[data-act="wldel"]').forEach(b=>b.addEventListener('click',()=>delWatch(b.dataset.id)));
   root.querySelectorAll('[data-act="rename"]').forEach(b=>b.addEventListener('click',()=>renameMovie(b.dataset.id)));
   root.querySelectorAll('[data-act="genre"]').forEach(b=>b.addEventListener('click',()=>editGenre(b.dataset.id)));
   root.querySelectorAll('[data-act="cover"]').forEach(b=>b.addEventListener('click',()=>pickCover(b.dataset.id)));
