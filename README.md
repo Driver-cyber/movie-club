@@ -5,13 +5,14 @@ Acting — Performance, Acting — Casting, Cinematography, Special effects, Set
 Soundtrack, Soundscape, Satisfying ending, Predictability, Overall enjoyment), plus a genre
 tag, notes, and a shared verdict tab. Add a film by typing its title — suggestions, genre, and
 poster art autocomplete in. Built mobile-first for iPhone, installable to the home screen,
-synced across both phones via Cloudflare KV.
+synced across both phones with no account or dashboard setup.
 
 ## Stack
 - Static `index.html` (no build step) + service worker + web manifest
-- `functions/api/data.js` — Cloudflare Pages Function, reads/writes one JSON blob in KV
+- `functions/api/data.js` — Cloudflare Pages Function proxying a free no-login JSON store
+  (jsonblob.com). Each couple gets a shared "box" id; GET/PUT/POST `/api/data?box=<id>`
 - `functions/api/search.js` — title autocomplete + posters (TMDB if keyed, else keyless iTunes)
-- Sync model: app GETs/PUTs `/api/data`; mirrors to `localStorage` for instant + offline
+- Sync model: app GETs/PUTs `/api/data?box=<id>`; mirrors to `localStorage` for instant + offline
 
 ## Ratings
 - Ten categories are rated 1–5 stars (tap a lit star again to clear).
@@ -25,7 +26,16 @@ synced across both phones via Cloudflare KV.
 - Picking a search suggestion attaches its poster automatically.
 - For films search can't find, use **Add cover / Change cover** on the rating card (or
   **Upload cover image** in the add-film form) to upload your own. Images are downscaled to a
-  small JPEG and stored inline with the data, so they travel with backups and sync via KV.
+  small JPEG and stored inline with the data, so they travel with backups and sync.
+
+## Cross-phone sync (no account, no dashboard)
+On the **Shared** tab, tap **Turn on cross-phone sync**. The app creates a shared "box" on a
+free no-login store and saves its id on this device. Then **Copy invite link** and open it on
+the other phone (or use **Enter a code**) — both phones now read/write the same list. Sync is
+low-security by design: anyone with the box id can read/write, which is fine for a private
+movie list. Every device also keeps a `localStorage` copy and you can Export backups, so data
+survives even if the store is unreachable. (jsonblob purges boxes untouched for ~30 days, so
+keep using the app or take the occasional Export.)
 
 ## Backup & roll-forward
 The **Shared** tab has **Export data (.json)** and **Import data**. Export downloads a
@@ -58,16 +68,11 @@ Build settings:
 
 Deploy. You'll get a `*.pages.dev` URL.
 
-### 3. Add the KV store (this is what makes it sync)
-1. **Workers & Pages → KV → Create namespace**, name it `movie-club`.
-2. Pages project → **Settings → Functions → KV namespace bindings → Add**:
-   - Variable name: **`MOVIE_CLUB`**  ← must match exactly
-   - Namespace: `movie-club`
-   - Add it for **Production** (and Preview if you want).
-3. **Re-deploy** (Deployments → Retry/redeploy) so the binding takes effect.
-
-Until KV is bound, the app still runs but only saves locally on each phone. Once bound,
-both phones share one list.
+### 3. Turn on cross-phone sync (in the app — no dashboard needed)
+Sync is built into the app and needs no KV binding or account. On the **Shared** tab tap
+**Turn on cross-phone sync**, then **Copy invite link** and open it on the other phone. See
+[Cross-phone sync](#cross-phone-sync-no-account-no-dashboard) above. Until you turn it on, the
+app still works and saves locally on each phone.
 
 ### 3b. (Optional) Better posters & search with TMDB
 Autocomplete works out of the box using Apple's keyless iTunes Search API. For sharper

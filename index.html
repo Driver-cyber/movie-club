@@ -224,6 +224,15 @@
   .empty .big{font-family:var(--serif);font-style:italic;font-size:23px;color:var(--bone);margin-bottom:9px}
   .empty .small{font-family:var(--mono);font-size:12px;letter-spacing:0.05em;line-height:1.7}
 
+  .syncbox{background:linear-gradient(180deg,var(--ink-3),var(--ink-2));border:1px solid var(--line-strong);
+    border-radius:13px;padding:16px;margin-top:18px}
+  .syncbox-h{font-family:var(--mono);font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:var(--gold);margin-bottom:8px}
+  .syncbox-p{font-family:var(--serif);font-size:14.5px;color:var(--bone-dim);line-height:1.5;margin-bottom:12px}
+  .synccode{font-family:var(--mono);font-size:13px;color:var(--bone);background:var(--ink);
+    border:1px dashed var(--line-strong);border-radius:9px;padding:11px 12px;word-break:break-all;
+    margin-bottom:12px;text-align:center;letter-spacing:0.04em}
+  .syncbtns{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;align-items:center}
+
   .datatools{display:flex;gap:8px;margin-top:20px;justify-content:center;flex-wrap:wrap}
   .datahint{text-align:center;font-family:var(--mono);font-size:9.5px;letter-spacing:0.06em;
     color:var(--bone-faint);margin-top:9px;line-height:1.6;padding:0 12px}
@@ -282,6 +291,7 @@
 const API='/api/data';
 const SEARCH='/api/search';
 const LKEY='movieclub:data';
+const SBKEY='movieclub:syncbox';   // shared "box" id for cross-phone sync
 const SCHEMA_VERSION=1;   // bump when the data shape changes; import normalizes forward
 const CATEGORIES=[
   {key:'plot',               label:'Plot',               desc:'story · structure'},
@@ -307,32 +317,63 @@ const PRED_WORDS=['Not rated','Totally predictable','Predictable','Even odds','S
 
 let data={movies:[]};
 let selectedId=null, activeTab='chad', sortMode='recent', newFormOpen=false;
-let saveTimer=null, source='memory';
+let saveTimer=null, source='memory', syncBox='';
 let suggTimer=null, suggList=[], pendingPick=null, pendingCover=null;
 
 /* ---------- storage ---------- */
 function mirrorLocal(){ try{ localStorage.setItem(LKEY, JSON.stringify(data)); }catch(e){} }
 function readLocal(){ try{ const s=localStorage.getItem(LKEY); if(s){ const j=JSON.parse(s); if(j&&Array.isArray(j.movies)) return j; } }catch(e){} return null; }
+function loadSyncBox(){ try{ return localStorage.getItem(SBKEY)||''; }catch(e){ return ''; } }
+function saveSyncBox(id){ syncBox=id||''; try{ if(id) localStorage.setItem(SBKEY,id); else localStorage.removeItem(SBKEY); }catch(e){} }
 
 async function loadData(){
-  try{
-    const r=await fetch(API,{cache:'no-store'});
-    if(r.ok){ const j=await r.json(); if(j&&Array.isArray(j.movies)){ data=j; normalize(); mirrorLocal(); source='server'; return; } }
-  }catch(e){}
+  if(syncBox){
+    try{
+      const r=await fetch(`${API}?box=${encodeURIComponent(syncBox)}`,{cache:'no-store'});
+      if(r.ok){ const j=await r.json(); if(j&&Array.isArray(j.movies)){ data=j; normalize(); mirrorLocal(); source='server'; return; } }
+    }catch(e){}
+  }
   const local=readLocal();
   if(local){ data=local; normalize(); source='local'; return; }
   source='memory';
 }
 function scheduleSave(){ clearTimeout(saveTimer); saveTimer=setTimeout(saveData,450); }
 async function saveData(){
-  mirrorLocal();                       // instant + offline
-  if(source==='memory') return;
+  mirrorLocal();                       // instant + offline, every device
+  if(!syncBox){ if(data.movies.length) source='local'; return; }
   toast('Saving…');
   try{
-    const r=await fetch(API,{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify(data)});
+    const r=await fetch(`${API}?box=${encodeURIComponent(syncBox)}`,{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify(data)});
     if(r.ok){ source='server'; toast('Saved & synced'); return; }
     source='local'; toast('Saved on this iPhone');
   }catch(e){ source='local'; toast('Saved offline'); }
+}
+
+/* ---------- cross-phone sync (no account) ---------- */
+async function enableSync(){
+  toast('Setting up sync…');
+  try{
+    const r=await fetch(API,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(data)});
+    const j=await r.json().catch(()=>null);
+    if(r.ok&&j&&j.box){ saveSyncBox(j.box); source='server'; toast('Sync is on'); render(); return; }
+  }catch(e){}
+  toast('Could not start sync — try again');
+}
+async function adoptSync(code){
+  const id=(code||'').trim().replace(/.*\/?sync=/,''); if(!id) return;
+  if(data.movies.length && !confirm("Switch this phone to the shared list? It replaces the films currently on THIS phone (use Export first if you want a backup).")) return;
+  saveSyncBox(id);
+  await loadData();
+  selectedId=data.movies[0]?data.movies[0].id:null;
+  render(); toast(source==='server'?'Connected to shared list':'Saved code — could not reach it yet');
+}
+function disconnectSync(){
+  if(!confirm('Stop syncing on this phone? Your films stay saved here, just not shared.')) return;
+  saveSyncBox(''); source=data.movies.length?'local':'memory'; render(); toast('Sync turned off');
+}
+function copyLink(link){
+  try{ navigator.clipboard.writeText(link).then(()=>toast('Invite link copied'),()=>prompt('Copy this invite link:',link)); }
+  catch(e){ prompt('Copy this invite link:',link); }
 }
 let toastTimer=null;
 function toast(msg){
@@ -472,7 +513,7 @@ function personPanel(p){
     </div></div>`;
 }
 function sharedPanel(){
-  if(!data.movies.length) return `<div class="empty"><div class="big">Your shared shelf is empty</div><div class="small">Once you've both rated a film,<br>the combined verdicts land here.</div></div>`+dataToolsHTML();
+  if(!data.movies.length) return `<div class="empty"><div class="big">Your shared shelf is empty</div><div class="small">Once you've both rated a film,<br>the combined verdicts land here.</div></div>`+syncToolsHTML()+dataToolsHTML();
   const rated=data.movies.filter(m=>combinedAvg(m)!==null);
   let top=null,split=null,gap=-1;
   rated.forEach(m=>{ if(!top||combinedAvg(m)>combinedAvg(top)) top=m;
@@ -502,7 +543,7 @@ function sharedPanel(){
       <div class="filmrow-foot"><button class="mini" data-act="rate" data-id="${m.id}">Open &amp; rate</button>
         <button class="mini" data-act="rename" data-id="${m.id}">Rename</button>
         <button class="mini danger" data-act="delete" data-id="${m.id}">Remove</button></div></div>`; }).join('');
-  return stats+sorts+rows+dataToolsHTML();
+  return stats+sorts+rows+syncToolsHTML()+dataToolsHTML();
 }
 
 /* ---------- title search / autocomplete ---------- */
@@ -613,6 +654,27 @@ function dataToolsHTML(){
     </div>
     <div class="datahint">Back up your ratings to a file, or restore them — handy when rolling forward to new versions.</div>`;
 }
+function syncToolsHTML(){
+  if(syncBox){
+    const url=location.origin+'/?sync='+encodeURIComponent(syncBox);
+    return `<div class="syncbox">
+      <div class="syncbox-h">✓ Cross-phone sync is on</div>
+      <div class="syncbox-p">Add your other phone: open this invite link on it, or enter the code by hand.</div>
+      <div class="synccode">${esc(syncBox)}</div>
+      <div class="syncbtns">
+        <button class="btn btn-add" data-act="copylink" data-link="${esc(url)}" style="min-height:44px">Copy invite link</button>
+        <button class="mini" data-act="adopt">Enter a code</button>
+        <button class="mini danger" data-act="syncoff">Turn off</button>
+      </div></div>`;
+  }
+  return `<div class="syncbox">
+    <div class="syncbox-h">Share with your other phone</div>
+    <div class="syncbox-p">Turn on sync here, then open the invite link on your partner's phone. No account, no setup — both phones share one list.</div>
+    <div class="syncbtns">
+      <button class="btn btn-add" data-act="syncon" style="min-height:46px">Turn on cross-phone sync</button>
+      <button class="mini" data-act="adopt">I already have a code</button>
+    </div></div>`;
+}
 
 /* ---------- events ---------- */
 function wire(){
@@ -653,19 +715,30 @@ function wire(){
   root.querySelectorAll('[data-act="cover"]').forEach(b=>b.addEventListener('click',()=>pickCover(b.dataset.id)));
   root.querySelectorAll('[data-act="export"]').forEach(b=>b.addEventListener('click',exportData));
   root.querySelectorAll('[data-act="import"]').forEach(b=>b.addEventListener('click',importData));
+  root.querySelectorAll('[data-act="syncon"]').forEach(b=>b.addEventListener('click',enableSync));
+  root.querySelectorAll('[data-act="syncoff"]').forEach(b=>b.addEventListener('click',disconnectSync));
+  root.querySelectorAll('[data-act="adopt"]').forEach(b=>b.addEventListener('click',()=>adoptSync(prompt('Paste the sync code (or invite link) from your other phone:'))));
+  root.querySelectorAll('[data-act="copylink"]').forEach(b=>b.addEventListener('click',()=>copyLink(b.dataset.link)));
   root.querySelectorAll('[data-act="delete"]').forEach(b=>b.addEventListener('click',()=>deleteMovie(b.dataset.id)));
 }
 
 /* pull latest when returning to the app (other phone may have rated) */
 document.addEventListener('visibilitychange',async()=>{
-  if(document.visibilityState!=='visible'||source==='memory') return;
+  if(document.visibilityState!=='visible'||!syncBox) return;
   const ae=document.activeElement; if(ae&&/INPUT|TEXTAREA/.test(ae.tagName)) return;
-  try{ const r=await fetch(API,{cache:'no-store'}); if(r.ok){ const j=await r.json();
+  try{ const r=await fetch(`${API}?box=${encodeURIComponent(syncBox)}`,{cache:'no-store'}); if(r.ok){ const j=await r.json();
     if(j&&Array.isArray(j.movies)){ data=j; normalize(); mirrorLocal(); if(selectedId&&!getMovie(selectedId)) selectedId=data.movies[0]?.id||null; render(); } } }catch(e){}
 });
 
 /* boot */
-(async function(){ await loadData(); if(data.movies.length) selectedId=data.movies[0].id; render();
+(async function(){
+  syncBox=loadSyncBox();
+  try{ const u=new URL(location.href); const incoming=(u.searchParams.get('sync')||'').trim();
+    if(incoming && incoming!==syncBox){
+      if(!syncBox || confirm('Open the shared movie list on this phone?')) saveSyncBox(incoming);
+      u.searchParams.delete('sync'); history.replaceState(null,'',u.pathname+(u.search||'')+u.hash);
+    } }catch(e){}
+  await loadData(); if(data.movies.length) selectedId=data.movies[0].id; render();
   if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{}); })();
 </script>
 </body>
