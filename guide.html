@@ -178,6 +178,16 @@
   .m-code{font-family:var(--mono);font-size:10px;color:var(--bone);background:var(--ink);
     border:1px dashed var(--line-strong);border-radius:8px;padding:8px;margin-bottom:9px;letter-spacing:0.05em}
 
+  /* guest mock rows */
+  .gm-row{display:flex;justify-content:space-between;align-items:center;gap:9px;background:var(--ink);
+    border:1px solid var(--line);border-radius:9px;padding:8px 10px;margin-bottom:7px;text-align:left}
+  .gm-name{font-family:var(--serif);font-style:italic;font-size:13px;color:var(--bone)}
+  .gm-sub{font-family:var(--mono);font-size:8px;color:var(--bone-faint);letter-spacing:0.05em;margin-top:2px}
+  .gm-btn{font-family:var(--mono);font-size:8.5px;font-weight:600;color:var(--bone);
+    border:1px solid var(--line-strong);border-radius:7px;padding:6px 9px;white-space:nowrap;flex-shrink:0}
+  .gm-add{font-family:var(--mono);font-size:9px;color:var(--gold);border:1px dashed var(--gold-dim);
+    border-radius:8px;padding:9px;text-align:center;margin-top:2px}
+
   /* two phones */
   .duo{display:flex;align-items:center;justify-content:center;gap:6px}
   .duo .mini{width:104px;flex-shrink:0;background:linear-gradient(180deg,var(--ink-2),var(--ink));
@@ -370,7 +380,26 @@
     </div>
   </section>
 
-  <!-- 8. Backups -->
+  <!-- 8. Guests -->
+  <section class="scene" data-label="Guests">
+    <div class="phone reveal">
+      <div class="notch"></div>
+      <div class="m-eyebrow" style="color:var(--gold)">Movie-night guests · 2/3</div>
+      <div class="m-card" style="margin-top:12px">
+        <div class="gm-row"><div><div class="gm-name">Ashton</div><div class="gm-sub">invite sent · not rated yet</div></div><div class="gm-btn">Copy link</div></div>
+        <div class="gm-row"><div><div class="gm-name">Sydnee</div><div class="gm-sub">4.6 / 5</div></div><div class="gm-btn">Copy link</div></div>
+        <div class="gm-add">＋ Add a guest</div>
+      </div>
+    </div>
+    <div class="copy">
+      <div class="num reveal">08</div>
+      <h2 class="reveal d1">Movie night<br>with friends</h2>
+      <p class="reveal d2">Having people over? On any film, tap <b>Add a guest</b> (up to 3). Each one gets a <b>private link</b> to rate just that movie from their own phone — no app, no login.</p>
+      <div class="tip reveal d3">Copy the link, text it over, done. Their scores land under the film in <b>Shared</b> — your &amp; Joelle's verdict stays its own thing.</div>
+    </div>
+  </section>
+
+  <!-- 9. Backups -->
   <section class="scene" data-label="Backup">
     <div class="phone reveal">
       <div class="notch"></div>
@@ -383,14 +412,14 @@
       </div>
     </div>
     <div class="copy">
-      <div class="num reveal">08</div>
+      <div class="num reveal">09</div>
       <h2 class="reveal d1">Never lose a rating</h2>
       <p class="reveal d2">Every phone keeps its own copy, and <b>Export data</b> saves a backup file you can stash anywhere. <b>Import</b> brings it back — even into future versions of the app.</p>
       <div class="tip reveal d3">A quick Export now and then is a nice safety net.</div>
     </div>
   </section>
 
-  <!-- 9. Add to home screen -->
+  <!-- 10. Add to home screen -->
   <section class="scene" data-label="Install">
     <div class="phone reveal">
       <div class="notch"></div>
@@ -402,7 +431,7 @@
       </div>
     </div>
     <div class="copy">
-      <div class="num reveal">09</div>
+      <div class="num reveal">10</div>
       <h2 class="reveal d1">Put it on your home screen</h2>
       <p class="reveal d2">In Safari, tap <b>Share</b> then <b>Add to Home Screen</b>. Movie Club opens full-screen like a real app — no browser bars.</p>
     </div>
@@ -418,6 +447,7 @@
         <div class="m-step"><span class="n">2</span><span class="t"><b>Rate</b> it on your tab; have your partner rate on theirs</span></div>
         <div class="m-step"><span class="n">3</span><span class="t"><b>Turn on sync</b> and share the invite link once</span></div>
         <div class="m-step"><span class="n">4</span><span class="t">Check the <b>Shared</b> tab for your combined verdict</span></div>
+        <div class="m-step"><span class="n">5</span><span class="t">People over? <b>Add a guest</b> to a film and text them the link</span></div>
       </div>
       <div class="reveal d3" style="margin-top:26px">
         <a class="cta" href="/">Open Movie Club</a><br>
