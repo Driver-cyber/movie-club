@@ -422,13 +422,15 @@ function loadSyncBox(){ try{ return localStorage.getItem(SBKEY)||''; }catch(e){ 
 function saveSyncBox(id){ syncBox=id||''; try{ if(id) localStorage.setItem(SBKEY,id); else localStorage.removeItem(SBKEY); }catch(e){} }
 
 async function loadData(){
+  const local=readLocal();
   if(syncBox){
     try{
       const r=await fetch(`${API}?box=${encodeURIComponent(syncBox)}`,{cache:'no-store'});
-      if(r.ok){ const j=await r.json(); if(j&&Array.isArray(j.movies)){ data=j; normalize(); mirrorLocal(); source='server'; return; } }
+      if(r.ok){ const j=await r.json(); if(j&&Array.isArray(j.movies)){
+        data = local ? mergeData(local,j) : j;   // keep any local-only additions
+        normalize(); mirrorLocal(); source='server'; return; } }
     }catch(e){}
   }
-  const local=readLocal();
   if(local){ data=local; normalize(); source='local'; return; }
   source='memory';
 }
@@ -438,10 +440,23 @@ async function saveData(){
   if(!syncBox){ if(data.movies.length) source='local'; return; }
   toast('Saving…');
   try{
+    // pull the latest first and MERGE, so we never clobber the other phone's changes
+    try{ const g=await fetch(`${API}?box=${encodeURIComponent(syncBox)}`,{cache:'no-store'});
+      if(g.ok){ const j=await g.json(); if(j&&Array.isArray(j.movies)){ data=mergeData(data,j); normalize(); mirrorLocal(); } } }catch(e){}
     const r=await fetch(`${API}?box=${encodeURIComponent(syncBox)}`,{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify(data)});
-    if(r.ok){ source='server'; toast('Saved & synced'); return; }
+    if(r.ok){ source='server'; toast('Saved & synced'); render(); return; }
     source='local'; toast('Saved on this iPhone');
   }catch(e){ source='local'; toast('Saved offline'); }
+}
+/* gentle background pull so the other phone's changes appear on their own */
+async function pollSync(){
+  if(!syncBox || document.visibilityState!=='visible') return;
+  const ae=document.activeElement; if(ae&&/INPUT|TEXTAREA|SELECT/.test(ae.tagName)) return;
+  try{ const r=await fetch(`${API}?box=${encodeURIComponent(syncBox)}`,{cache:'no-store'}); if(!r.ok) return;
+    const j=await r.json(); if(!j||!Array.isArray(j.movies)) return;
+    const before=JSON.stringify(data); data=mergeData(data,j); normalize();
+    if(JSON.stringify(data)!==before){ mirrorLocal(); if(selectedId&&!getMovie(selectedId)) selectedId=data.movies[0]?.id||null; render(); }
+  }catch(e){}
 }
 
 /* ---------- cross-phone sync (no account) ---------- */
@@ -481,7 +496,8 @@ function toast(msg){
 /* ---------- helpers ---------- */
 function uid(){ return 'm'+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
 function getMovie(id){ return data.movies.find(m=>m.id===id)||null; }
-function blankPerson(){ const o={notes:'',recommend:null}; CATEGORIES.forEach(c=>o[c.key]=0); return o; }
+function blankPerson(){ const o={notes:'',recommend:null,updated:0}; CATEGORIES.forEach(c=>o[c.key]=0); return o; }
+function now(){ return Date.now(); }
 function blank(){ return {chad:blankPerson(),joelle:blankPerson()}; }
 function normalize(){
   if(!data||!Array.isArray(data.movies)){ data={movies:[]}; return; }
@@ -492,6 +508,7 @@ function normalize(){
     if(m.type!=='tv') m.type='movie';
     if(typeof m.fav!=='boolean') m.fav=false;
     if(typeof m.created!=='number') m.created=0;
+    if(typeof m.updated!=='number') m.updated=m.created||0;
     if(typeof m.includeGuests!=='boolean') m.includeGuests=false;
     if(!m.ratings||typeof m.ratings!=='object') m.ratings=blank();
     Object.keys(PEOPLE).forEach(p=>{
@@ -499,6 +516,7 @@ function normalize(){
       CATEGORIES.forEach(c=>{ if(typeof r[c.key]!=='number') r[c.key]=0; });
       if(typeof r.notes!=='string') r.notes='';
       if(r.recommend!==true&&r.recommend!==false) r.recommend=null;
+      if(typeof r.updated!=='number') r.updated=0;
     });
     if(!Array.isArray(m.guests)) m.guests=[];
     m.guests=m.guests.slice(0,3);
@@ -508,6 +526,7 @@ function normalize(){
       if(!g.ratings||typeof g.ratings!=='object') g.ratings=blankPerson();
       CATEGORIES.forEach(c=>{ if(typeof g.ratings[c.key]!=='number') g.ratings[c.key]=0; });
       if(typeof g.ratings.notes!=='string') g.ratings.notes='';
+      if(typeof g.updated!=='number') g.updated=0;
     });
   });
   if(!Array.isArray(data.watchlist)) data.watchlist=[];
@@ -516,8 +535,27 @@ function normalize(){
     ['title','year','genre','poster','service','vibe'].forEach(k=>{ if(typeof w[k]!=='string') w[k]=''; });
     if(w.type!=='tv') w.type='movie';
     if(typeof w.created!=='number') w.created=0;
+    if(typeof w.updated!=='number') w.updated=w.created||0;
   });
+  if(!Array.isArray(data.deleted)) data.deleted=[];
 }
+/* ---------- sync merge (so two phones don't clobber each other) ---------- */
+function mergePerson(a,b){ if(!a) return b; if(!b) return a; return ((a.updated||0)>=(b.updated||0))?a:b; }
+function mergeGuests(ra,rb){ const map=new Map(); (ra||[]).forEach(g=>map.set(g.id,g));
+  (rb||[]).forEach(g=>{ const e=map.get(g.id); if(!e||(g.updated||0)>=(e.updated||0)) map.set(g.id,g); }); return [...map.values()].slice(0,3); }
+function mergeMovie(a,b){ const base=((a.updated||a.created||0)>=(b.updated||b.created||0))?a:b; const out={...base};
+  out.ratings={ chad:mergePerson(a.ratings&&a.ratings.chad,b.ratings&&b.ratings.chad), joelle:mergePerson(a.ratings&&a.ratings.joelle,b.ratings&&b.ratings.joelle) };
+  out.guests=mergeGuests(a.guests,b.guests); return out; }
+function mergeList(localArr,remoteArr,tomb,mergeItem){
+  const lMap=new Map((localArr||[]).map(x=>[x.id,x])), rMap=new Map((remoteArr||[]).map(x=>[x.id,x]));
+  const order=[], seen=new Set();
+  (localArr||[]).concat(remoteArr||[]).forEach(x=>{ if(!seen.has(x.id)){ seen.add(x.id); order.push(x.id); } });
+  const out=[]; order.forEach(id=>{ if(tomb.has(id)) return; const l=lMap.get(id),r=rMap.get(id);
+    out.push(l&&r ? (mergeItem?mergeItem(l,r):((l.updated||0)>=(r.updated||0)?l:r)) : (l||r)); });
+  return out; }
+function mergeData(local,remote){ const tomb=new Set([...(local.deleted||[]),...(remote.deleted||[])]);
+  return { movies:mergeList(local.movies,remote.movies,tomb,mergeMovie),
+    watchlist:mergeList(local.watchlist,remote.watchlist,tomb,null), deleted:[...tomb].slice(-1000) }; }
 function avgOf(r){ if(!r) return null; let sum=0,wsum=0;
   CATEGORIES.forEach(c=>{ const v=r[c.key]; if(v>0){ const w=c.weight||1; sum+=v*w; wsum+=w; } });
   return wsum?sum/wsum:null; }
@@ -533,14 +571,14 @@ function esc(s){ return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>
 /* ---------- mutations ---------- */
 function addMovie(title,date,extra){ const t=(title||'').trim(); if(!t) return;
   const e=extra||{};
-  const m={id:uid(),title:t,type:(e.type==='tv'?'tv':'movie'),watched:date||'',year:e.year||'',genre:e.genre||'',poster:e.poster||'',fav:false,created:Date.now(),includeGuests:false,ratings:blank(),guests:[]};
+  const m={id:uid(),title:t,type:(e.type==='tv'?'tv':'movie'),watched:date||'',year:e.year||'',genre:e.genre||'',poster:e.poster||'',fav:false,created:Date.now(),updated:Date.now(),includeGuests:false,ratings:blank(),guests:[]};
   data.movies.unshift(m); selectedId=m.id; newFormOpen=false; listView=false; pendingPick=null; pendingCover=null; pendingType='movie'; scheduleSave(); render(); window.scrollTo({top:0,behavior:'smooth'}); }
 function toggleFav(id){ const m=getMovie(id); if(!m) return;
   if(!m.fav && favCount()>=MAX_FAV){ toast(`Top ${MAX_FAV} is full — unheart one first`); return; }
-  m.fav=!m.fav; scheduleSave(); render(); }
+  m.fav=!m.fav; m.updated=now(); scheduleSave(); render(); }
 function favCount(){ return data.movies.filter(m=>m.fav).length; }
 function setRecommend(id,p,val){ const m=getMovie(id); if(!m) return;
-  m.ratings[p].recommend=(m.ratings[p].recommend===val)?null:val; scheduleSave(); render(); }
+  m.ratings[p].recommend=(m.ratings[p].recommend===val)?null:val; m.ratings[p].updated=now(); scheduleSave(); render(); }
 function openEdit(id){ selectedId=id; listView=false; render(); window.scrollTo({top:0,behavior:'smooth'}); }
 function closeEdit(){ clearTimeout(saveTimer); saveData(); listView=true; render(); window.scrollTo({top:0,behavior:'smooth'}); }
 
@@ -582,15 +620,15 @@ function controlsHTML(){
 }
 function deleteMovie(id){ const m=getMovie(id); if(!m) return;
   if(!confirm(`Remove "${m.title}" and both your ratings? This can't be undone.`)) return;
-  data.movies=data.movies.filter(x=>x.id!==id);
-  if(selectedId===id) selectedId=data.movies[0]?data.movies[0].id:null; scheduleSave(); render(); }
+  data.movies=data.movies.filter(x=>x.id!==id); (data.deleted=data.deleted||[]).push(id);
+  if(selectedId===id){ selectedId=data.movies[0]?data.movies[0].id:null; listView=true; } scheduleSave(); render(); }
 function renameMovie(id){ const m=getMovie(id); if(!m) return;
   const n=prompt('Movie title',m.title); if(n===null) return; const t=n.trim(); if(!t) return;
-  m.title=t; scheduleSave(); render(); }
+  m.title=t; m.updated=now(); scheduleSave(); render(); }
 function editGenre(id){ const m=getMovie(id); if(!m) return;
   const n=prompt('Genre (e.g. Drama, Sci-Fi, Comedy)', m.genre||''); if(n===null) return;
-  m.genre=n.trim(); scheduleSave(); render(); }
-function toggleVerdict(id){ const m=getMovie(id); if(!m) return; m.includeGuests=!m.includeGuests; scheduleSave(); render(); }
+  m.genre=n.trim(); m.updated=now(); scheduleSave(); render(); }
+function toggleVerdict(id){ const m=getMovie(id); if(!m) return; m.includeGuests=!m.includeGuests; m.updated=now(); scheduleSave(); render(); }
 
 /* ---------- guests (per movie, up to 3) ---------- */
 function guestLink(m,g){
@@ -606,33 +644,33 @@ async function addGuest(id){
     if(!syncBox){ toast('Could not turn on sync — try again'); return; }
   }
   const name=prompt('Guest name (e.g. Ashton)'); if(name===null) return;
-  const g={id:'g'+Date.now().toString(36)+Math.random().toString(36).slice(2,4),name:(name||'').trim(),ratings:blankPerson()};
-  m.guests.push(g); scheduleSave(); render();
+  const g={id:'g'+Date.now().toString(36)+Math.random().toString(36).slice(2,4),name:(name||'').trim(),ratings:blankPerson(),updated:now()};
+  m.guests.push(g); m.updated=now(); scheduleSave(); render();
   copyLink(guestLink(m,g),'Guest link copied — send it to '+(g.name||'your guest'));
 }
 function delGuest(id,gid){
   const m=getMovie(id); if(!m||!Array.isArray(m.guests)) return;
   const g=m.guests.find(x=>x.id===gid); if(!g) return;
   if(!confirm(`Remove ${g.name||'this guest'} and their rating?`)) return;
-  m.guests=m.guests.filter(x=>x.id!==gid); scheduleSave(); render();
+  m.guests=m.guests.filter(x=>x.id!==gid); m.updated=now(); scheduleSave(); render();
 }
 function setRating(id,p,cat,v){ const m=getMovie(id); if(!m) return;
-  m.ratings[p][cat]=(m.ratings[p][cat]===v)?0:v; scheduleSave(); render(); }
-function setNotes(id,p,text){ const m=getMovie(id); if(!m) return; m.ratings[p].notes=text; scheduleSave(); }
+  m.ratings[p][cat]=(m.ratings[p][cat]===v)?0:v; m.ratings[p].updated=now(); scheduleSave(); render(); }
+function setNotes(id,p,text){ const m=getMovie(id); if(!m) return; m.ratings[p].notes=text; m.ratings[p].updated=now(); scheduleSave(); }
 
 /* ---------- watch list (shared, to-watch) ---------- */
 function addWatch(title,extra){ const t=(title||'').trim(); if(!t) return; const e=extra||{};
-  const w={id:'w'+Date.now().toString(36)+Math.random().toString(36).slice(2,4),title:t,type:(e.type==='tv'?'tv':'movie'),year:e.year||'',genre:e.genre||'',poster:e.poster||'',service:'',vibe:'',created:Date.now()};
+  const w={id:'w'+Date.now().toString(36)+Math.random().toString(36).slice(2,4),title:t,type:(e.type==='tv'?'tv':'movie'),year:e.year||'',genre:e.genre||'',poster:e.poster||'',service:'',vibe:'',created:Date.now(),updated:Date.now()};
   if(!Array.isArray(data.watchlist)) data.watchlist=[];
   data.watchlist.unshift(w); newFormOpen=false; pendingPick=null; pendingCover=null; pendingType='movie'; scheduleSave(); render(); toast('Added to your list'); }
 function delWatch(id){ const w=(data.watchlist||[]).find(x=>x.id===id); if(!w) return;
   if(!confirm(`Remove "${w.title}" from your watch list?`)) return;
-  data.watchlist=data.watchlist.filter(x=>x.id!==id); scheduleSave(); render(); }
-function setWLService(id,val){ const w=(data.watchlist||[]).find(x=>x.id===id); if(!w) return; w.service=val||''; scheduleSave(); render(); }
+  data.watchlist=data.watchlist.filter(x=>x.id!==id); (data.deleted=data.deleted||[]).push(id); scheduleSave(); render(); }
+function setWLService(id,val){ const w=(data.watchlist||[]).find(x=>x.id===id); if(!w) return; w.service=val||''; w.updated=now(); scheduleSave(); render(); }
 function setWLVibe(id){ const w=(data.watchlist||[]).find(x=>x.id===id); if(!w) return;
-  const v=prompt('Vibe / tag (e.g. cozy, date night, mind-bender)', w.vibe||''); if(v===null) return; w.vibe=v.trim(); scheduleSave(); render(); }
+  const v=prompt('Vibe / tag (e.g. cozy, date night, mind-bender)', w.vibe||''); if(v===null) return; w.vibe=v.trim(); w.updated=now(); scheduleSave(); render(); }
 function watchToLibrary(id){ const w=(data.watchlist||[]).find(x=>x.id===id); if(!w) return;
-  data.watchlist=data.watchlist.filter(x=>x.id!==id); activeTab='chad';
+  data.watchlist=data.watchlist.filter(x=>x.id!==id); (data.deleted=data.deleted||[]).push(id); activeTab='chad';
   addMovie(w.title,'',{type:w.type,year:w.year,genre:w.genre,poster:w.poster}); }
 function wlTagList(){ const s=new Set(); (data.watchlist||[]).forEach(w=>{ if(w.genre) s.add(w.genre); if(w.vibe) s.add(w.vibe); }); return [...s].sort(); }
 function visibleWatch(){ let arr=(data.watchlist||[]).slice();
@@ -938,7 +976,7 @@ function chooseImage(handler){
   inp.onchange=()=>{ const f=inp.files&&inp.files[0]; if(f) fileToPoster(f,handler); };
   inp.click();
 }
-function pickCover(id){ chooseImage(url=>{ const m=getMovie(id); if(!m) return; m.poster=url; scheduleSave(); render(); toast('Cover updated'); }); }
+function pickCover(id){ chooseImage(url=>{ const m=getMovie(id); if(!m) return; m.poster=url; m.updated=now(); scheduleSave(); render(); toast('Cover updated'); }); }
 function pickCoverForNew(){ chooseImage(url=>{ pendingCover=url; updatePickPreview(); toast('Cover ready'); }); }
 
 /* ---------- export / import (state file) ---------- */
@@ -1015,14 +1053,14 @@ function wire(){
     s.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();fire();}});});
   root.querySelectorAll('[data-act="slider"]').forEach(sl=>{
     sl.addEventListener('input',()=>{ const v=+sl.value; const m=getMovie(selectedId); if(!m) return;
-      m.ratings[sl.dataset.person][sl.dataset.cat]=v;
+      m.ratings[sl.dataset.person][sl.dataset.cat]=v; m.ratings[sl.dataset.person].updated=now();
       const rd=root.querySelector(`[data-read="${sl.dataset.person}-${sl.dataset.cat}"]`);
       if(rd){ rd.textContent=PRED_WORDS[v]; rd.classList.toggle('none',!v); }
       sl.classList.toggle('unset',!v); scheduleSave(); });
     sl.addEventListener('change',()=>render());   // refresh the "clear" affordance
   });
   root.querySelectorAll('[data-act="clearpred"]').forEach(b=>b.addEventListener('click',()=>{
-    const m=getMovie(selectedId); if(!m) return; m.ratings[b.dataset.person][b.dataset.cat]=0; scheduleSave(); render(); }));
+    const m=getMovie(selectedId); if(!m) return; m.ratings[b.dataset.person][b.dataset.cat]=0; m.ratings[b.dataset.person].updated=now(); scheduleSave(); render(); }));
   root.querySelectorAll('textarea.notes').forEach(ta=>ta.addEventListener('input',()=>setNotes(selectedId,ta.dataset.person,ta.value)));
   root.querySelectorAll('[data-sort]').forEach(c=>c.addEventListener('click',()=>{sortMode=c.dataset.sort;render();}));
   root.querySelectorAll('[data-act="rate"]').forEach(b=>b.addEventListener('click',()=>{selectedId=b.dataset.id;activeTab='chad';listView=false;render();window.scrollTo({top:0,behavior:'smooth'});}));
@@ -1057,12 +1095,8 @@ function wire(){
 }
 
 /* pull latest when returning to the app (other phone may have rated) */
-document.addEventListener('visibilitychange',async()=>{
-  if(document.visibilityState!=='visible'||!syncBox) return;
-  const ae=document.activeElement; if(ae&&/INPUT|TEXTAREA/.test(ae.tagName)) return;
-  try{ const r=await fetch(`${API}?box=${encodeURIComponent(syncBox)}`,{cache:'no-store'}); if(r.ok){ const j=await r.json();
-    if(j&&Array.isArray(j.movies)){ data=j; normalize(); mirrorLocal(); if(selectedId&&!getMovie(selectedId)) selectedId=data.movies[0]?.id||null; render(); } } }catch(e){}
-});
+/* pull + merge whenever the app comes back to the foreground */
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') pollSync(); });
 
 /* boot */
 (async function(){
@@ -1073,6 +1107,8 @@ document.addEventListener('visibilitychange',async()=>{
       u.searchParams.delete('sync'); history.replaceState(null,'',u.pathname+(u.search||'')+u.hash);
     } }catch(e){}
   await loadData(); if(data.movies.length) selectedId=data.movies[0].id; render();
+  if(syncBox) scheduleSave();                 // push any local-only items merged in at boot
+  setInterval(pollSync, 25000);               // gentle auto-refresh from the other phone
   if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{}); })();
 </script>
 </body>

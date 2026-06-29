@@ -192,6 +192,7 @@ async function submit(){
     g={id:gid||('g'+Date.now().toString(36)),ratings:blank()}; mv.guests.push(g); }
   g.name=(name||'').trim()||'Guest';
   g.ratings=r;
+  g.updated=Date.now();
   try{
     const pr=await fetch(`${API}?box=${encodeURIComponent(box)}`,{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify(data)});
     if(pr.ok){ document.getElementById('root').innerHTML=
