@@ -439,14 +439,26 @@ async function saveData(){
   mirrorLocal();                       // instant + offline, every device
   if(!syncBox){ if(data.movies.length) source='local'; return; }
   toast('Saving…');
+  let changed=false;
   try{
     // pull the latest first and MERGE, so we never clobber the other phone's changes
     try{ const g=await fetch(`${API}?box=${encodeURIComponent(syncBox)}`,{cache:'no-store'});
-      if(g.ok){ const j=await g.json(); if(j&&Array.isArray(j.movies)){ data=mergeData(data,j); normalize(); mirrorLocal(); } } }catch(e){}
+      if(g.ok){ const j=await g.json(); if(j&&Array.isArray(j.movies)){ const before=JSON.stringify(data); data=mergeData(data,j); normalize(); if(JSON.stringify(data)!==before){ changed=true; mirrorLocal(); } } } }catch(e){}
     const r=await fetch(`${API}?box=${encodeURIComponent(syncBox)}`,{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify(data)});
-    if(r.ok){ source='server'; toast('Saved & synced'); render(); return; }
+    if(r.ok){ source='server'; toast('Saved & synced');
+      const ae=document.activeElement;            // don't yank focus while editing
+      if(changed && !(ae&&/INPUT|TEXTAREA|SELECT/.test(ae.tagName))) render();
+      return; }
     source='local'; toast('Saved on this iPhone');
   }catch(e){ source='local'; toast('Saved offline'); }
+}
+async function manualPull(){
+  if(!syncBox){ toast('Sync is off'); return; }
+  toast('Refreshing…');
+  try{ const r=await fetch(`${API}?box=${encodeURIComponent(syncBox)}`,{cache:'no-store'}); if(r.ok){ const j=await r.json();
+    if(j&&Array.isArray(j.movies)){ data=mergeData(data,j); normalize(); mirrorLocal();
+      if(selectedId&&!getMovie(selectedId)) selectedId=data.movies[0]?.id||null; render(); toast('Up to date'); return; } } }catch(e){}
+  toast('Could not refresh — try again');
 }
 /* gentle background pull so the other phone's changes appear on their own */
 async function pollSync(){
@@ -471,7 +483,7 @@ async function enableSync(){
 }
 async function adoptSync(code){
   const id=(code||'').trim().replace(/.*\/?sync=/,''); if(!id) return;
-  if(data.movies.length && !confirm("Switch this phone to the shared list? It replaces the films currently on THIS phone (use Export first if you want a backup).")) return;
+  if(data.movies.length && !confirm("Join the shared list on this phone? Films already on this phone are combined into it (nothing is deleted).")) return;
   saveSyncBox(id);
   await loadData();
   selectedId=data.movies[0]?data.movies[0].id:null;
@@ -1017,6 +1029,7 @@ function syncToolsHTML(){
       <div class="synccode">${esc(syncBox)}</div>
       <div class="syncbtns">
         <button class="btn btn-add" data-act="copylink" data-link="${esc(url)}" style="min-height:44px">Copy invite link</button>
+        <button class="mini" data-act="refresh">↻ Refresh now</button>
         <button class="mini" data-act="adopt">Enter a code</button>
         <button class="mini danger" data-act="syncoff">Turn off</button>
       </div></div>`;
@@ -1086,6 +1099,7 @@ function wire(){
   root.querySelectorAll('[data-act="syncon"]').forEach(b=>b.addEventListener('click',enableSync));
   root.querySelectorAll('[data-act="syncoff"]').forEach(b=>b.addEventListener('click',disconnectSync));
   root.querySelectorAll('[data-act="adopt"]').forEach(b=>b.addEventListener('click',()=>adoptSync(prompt('Paste the sync code (or invite link) from your other phone:'))));
+  root.querySelectorAll('[data-act="refresh"]').forEach(b=>b.addEventListener('click',manualPull));
   root.querySelectorAll('[data-act="copylink"]').forEach(b=>b.addEventListener('click',()=>copyLink(b.dataset.link)));
   root.querySelectorAll('[data-act="gadd"]').forEach(b=>b.addEventListener('click',()=>addGuest(b.dataset.id)));
   root.querySelectorAll('[data-act="gcopy"]').forEach(b=>b.addEventListener('click',()=>copyLink(b.dataset.link,'Guest link copied')));
