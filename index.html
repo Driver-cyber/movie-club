@@ -327,6 +327,32 @@
   .gchip.vibe{color:var(--bone);border-color:var(--gold-dim);background:rgba(224,178,92,0.07)}
   .wlacts{display:flex;gap:7px;margin-top:4px;flex-wrap:wrap}
 
+  /* recommendations */
+  .recsbar{margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
+  .recs-h{font-family:var(--mono);font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--bone-dim);margin-bottom:11px;display:flex;align-items:center;gap:8px}
+  .recs-h b{color:var(--gold)}
+  .recs-refresh{margin-left:auto;font-family:var(--mono);font-size:13px;color:var(--bone-dim);background:transparent;border:1px solid var(--line);border-radius:50%;width:30px;height:30px;cursor:pointer;flex-shrink:0}
+  .recs{display:flex;gap:10px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:6px;scroll-snap-type:x mandatory}
+  .reccard{flex:0 0 132px;scroll-snap-align:start;background:linear-gradient(180deg,var(--ink-2),var(--ink));border:1px solid var(--line);border-radius:12px;padding:9px}
+  .recposter{width:100%;height:162px;border-radius:8px;object-fit:cover;background:var(--ink-3);display:flex;align-items:center;justify-content:center;font-size:26px}
+  .recmain{margin-top:8px}
+  .rectitle{font-family:var(--serif);font-style:italic;font-size:14px;line-height:1.15}
+  .recmeta{font-family:var(--mono);font-size:8.5px;color:var(--bone-faint);letter-spacing:0.05em;margin-top:4px}
+  .recacts{display:flex;flex-direction:column;gap:6px;margin-top:9px}
+  .recacts .mini{width:100%;justify-content:center;text-align:center}
+
+  /* trailer modal */
+  #trailer{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;padding:18px}
+  #trailer.show{display:flex}
+  .tr-back{position:absolute;inset:0;background:rgba(0,0,0,0.82);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
+  .tr-box{position:relative;z-index:1;width:100%;max-width:560px}
+  .tr-frame{position:relative;width:100%;padding-top:56.25%;border-radius:14px;overflow:hidden;border:1px solid var(--line-strong);background:#000}
+  .tr-frame iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+  .tr-x{position:absolute;top:-46px;right:0;font-family:var(--mono);font-size:14px;color:var(--bone);background:var(--ink-4);border:1px solid var(--line-strong);border-radius:50%;width:38px;height:38px;cursor:pointer;z-index:2}
+  .tr-cap{font-family:var(--serif);font-style:italic;color:var(--bone);text-align:center;margin-top:13px;font-size:16px}
+  .tr-load,.tr-none{background:var(--ink-2);border:1px solid var(--line-strong);border-radius:14px;padding:46px 22px;text-align:center;font-family:var(--mono);font-size:12px;color:var(--bone-dim);line-height:1.9}
+  .tr-none a{color:var(--gold)}
+
   /* bottom tab bar */
   .tabbar{position:fixed;left:0;right:0;bottom:0;z-index:20;
     background:linear-gradient(180deg,rgba(24,18,14,0.86),rgba(24,18,14,0.98));
@@ -371,6 +397,7 @@
 <body>
 <div class="wrap" id="root"><div class="loading">Loading the reel…</div></div>
 <div id="toast"></div>
+<div id="trailer"></div>
 
 <script>
 /* ================= Movie Club — Chad & Joelle =================
@@ -381,6 +408,8 @@
    ============================================================== */
 const API='/api/data';
 const SEARCH='/api/search';
+const TRAILER='/api/trailer';
+const RECS='/api/recs';
 const LKEY='movieclub:data';
 const SBKEY='movieclub:syncbox';   // shared "box" id for cross-phone sync
 const SCHEMA_VERSION=1;   // bump when the data shape changes; import normalizes forward
@@ -519,6 +548,7 @@ function normalize(){
     if(typeof m.genre!=='string') m.genre='';
     if(m.type!=='tv') m.type='movie';
     if(typeof m.fav!=='boolean') m.fav=false;
+    if(typeof m.tmdbId!=='number') m.tmdbId=0;
     if(typeof m.created!=='number') m.created=0;
     if(typeof m.updated!=='number') m.updated=m.created||0;
     if(typeof m.includeGuests!=='boolean') m.includeGuests=false;
@@ -545,6 +575,7 @@ function normalize(){
   data.watchlist.forEach(w=>{
     if(typeof w.id!=='string') w.id='w'+Math.random().toString(36).slice(2,7);
     ['title','year','genre','poster','service','vibe'].forEach(k=>{ if(typeof w[k]!=='string') w[k]=''; });
+    if(typeof w.tmdbId!=='number') w.tmdbId=0;
     if(w.type!=='tv') w.type='movie';
     if(typeof w.created!=='number') w.created=0;
     if(typeof w.updated!=='number') w.updated=w.created||0;
@@ -583,7 +614,7 @@ function esc(s){ return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>
 /* ---------- mutations ---------- */
 function addMovie(title,date,extra){ const t=(title||'').trim(); if(!t) return;
   const e=extra||{};
-  const m={id:uid(),title:t,type:(e.type==='tv'?'tv':'movie'),watched:date||'',year:e.year||'',genre:e.genre||'',poster:e.poster||'',fav:false,created:Date.now(),updated:Date.now(),includeGuests:false,ratings:blank(),guests:[]};
+  const m={id:uid(),title:t,type:(e.type==='tv'?'tv':'movie'),tmdbId:e.tmdbId||0,watched:date||'',year:e.year||'',genre:e.genre||'',poster:e.poster||'',fav:false,created:Date.now(),updated:Date.now(),includeGuests:false,ratings:blank(),guests:[]};
   data.movies.unshift(m); selectedId=m.id; newFormOpen=false; listView=false; pendingPick=null; pendingCover=null; pendingType='movie'; scheduleSave(); render(); window.scrollTo({top:0,behavior:'smooth'}); }
 function toggleFav(id){ const m=getMovie(id); if(!m) return;
   if(!m.fav && favCount()>=MAX_FAV){ toast(`Top ${MAX_FAV} is full — unheart one first`); return; }
@@ -670,9 +701,66 @@ function setRating(id,p,cat,v){ const m=getMovie(id); if(!m) return;
   m.ratings[p][cat]=(m.ratings[p][cat]===v)?0:v; m.ratings[p].updated=now(); scheduleSave(); render(); }
 function setNotes(id,p,text){ const m=getMovie(id); if(!m) return; m.ratings[p].notes=text; m.ratings[p].updated=now(); scheduleSave(); }
 
+/* ---------- trailers (in-app YouTube) ---------- */
+function trailerBtn(o,cls){ return `<button class="${cls||'mini'}" data-act="trailer" data-tmdb="${o.tmdbId||0}" data-ttype="${o.type||'movie'}" data-title="${esc(o.title)}">▶ Trailer</button>`; }
+async function openTrailer(opts){
+  const el=document.getElementById('trailer'); if(!el) return;
+  el.innerHTML=`<div class="tr-back" data-act="trclose"></div><div class="tr-box"><button class="tr-x" data-act="trclose">✕</button><div class="tr-load">Loading trailer…</div></div>`;
+  el.classList.add('show');
+  el.querySelectorAll('[data-act="trclose"]').forEach(b=>b.addEventListener('click',closeTrailer));
+  let qs='type='+encodeURIComponent(opts.type||'movie');
+  qs += opts.tmdbId ? '&id='+encodeURIComponent(opts.tmdbId) : '&q='+encodeURIComponent(opts.title||'');
+  let d=null; try{ const r=await fetch(`${TRAILER}?${qs}`); d=await r.json(); }catch(e){}
+  const box=el.querySelector('.tr-box'); if(!box) return;
+  if(d&&d.key){
+    box.innerHTML=`<button class="tr-x" data-act="trclose">✕</button>
+      <div class="tr-frame"><iframe src="https://www.youtube.com/embed/${encodeURIComponent(d.key)}?autoplay=1&playsinline=1&rel=0" title="Trailer" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe></div>
+      <div class="tr-cap">${esc(opts.title||'')}</div>`;
+  }else{
+    const yt='https://www.youtube.com/results?search_query='+encodeURIComponent((opts.title||'')+' trailer');
+    box.innerHTML=`<button class="tr-x" data-act="trclose">✕</button>
+      <div class="tr-none">No trailer in the database for this one.<br><a href="${yt}" target="_blank" rel="noopener">Search YouTube ↗</a></div>`;
+  }
+  el.querySelectorAll('[data-act="trclose"]').forEach(b=>b.addEventListener('click',closeTrailer));
+}
+function closeTrailer(){ const el=document.getElementById('trailer'); if(!el) return; el.classList.remove('show'); el.innerHTML=''; }
+
+/* ---------- recommendations (TMDB) ---------- */
+let recsState=null;   // null | 'loading' | {items, seed}
+async function loadRecs(){
+  recsState='loading'; render();
+  const withId=data.movies.filter(m=>m.tmdbId);
+  const favs=withId.filter(m=>m.fav);
+  const pool=(favs.length?favs:withId.filter(m=>combinedAvg(m)!==null));
+  pool.sort((a,b)=>(combinedAvg(b)||0)-(combinedAvg(a)||0));
+  const seed=pool[0]||null;
+  const qs=seed?`?type=${seed.type}&id=${seed.tmdbId}`:'';
+  let items=[]; try{ const r=await fetch(`${RECS}${qs}`); const d=await r.json(); items=Array.isArray(d.results)?d.results:[]; }catch(e){}
+  recsState={items, seed: seed?seed.title:''}; render();
+}
+function addRecToList(ds){ addWatch(ds.title,{type:ds.ttype,year:ds.year,genre:ds.genre,poster:ds.poster,tmdbId:+ds.tmdb||0}); }
+function recsSectionHTML(){
+  if(recsState===null) return `<div class="recsbar"><button class="btn" data-act="loadrecs" style="width:100%;min-height:46px">✨ Suggest something to watch</button></div>`;
+  if(recsState==='loading') return `<div class="recsbar"><div class="nomatch">Finding suggestions…</div></div>`;
+  const seed=recsState.seed;
+  const head=`<div class="recs-h">${seed?`More like <b>${esc(seed)}</b>`:'Trending this week'}<button class="recs-refresh" data-act="loadrecs" aria-label="Refresh">↻</button></div>`;
+  const have=new Set([...data.movies,...(data.watchlist||[])].map(x=>x.tmdbId).filter(Boolean));
+  const items=recsState.items.filter(x=>!have.has(x.tmdbId));
+  if(!items.length) return `<div class="recsbar">${head}<div class="nomatch">Nothing new to suggest right now.</div></div>`;
+  const cards=items.map(x=>`<div class="reccard">
+    ${x.poster?`<img class="recposter" src="${esc(x.poster)}" alt="" loading="lazy" />`:`<div class="recposter ph">🎬</div>`}
+    <div class="recmain"><div class="rectitle">${esc(x.title)}${x.type==='tv'?' <span class="tvbadge">TV</span>':''}</div>
+      <div class="recmeta">${[esc(x.year),esc(x.genre)].filter(Boolean).join(' · ')}</div>
+      <div class="recacts">
+        <button class="mini" data-act="addrec" data-tmdb="${x.tmdbId}" data-ttype="${x.type}" data-title="${esc(x.title)}" data-year="${esc(x.year)}" data-genre="${esc(x.genre)}" data-poster="${esc(x.poster)}">＋ List</button>
+        <button class="mini" data-act="trailer" data-tmdb="${x.tmdbId}" data-ttype="${x.type}" data-title="${esc(x.title)}">▶ Trailer</button>
+      </div></div></div>`).join('');
+  return `<div class="recsbar">${head}<div class="recs">${cards}</div></div>`;
+}
+
 /* ---------- watch list (shared, to-watch) ---------- */
 function addWatch(title,extra){ const t=(title||'').trim(); if(!t) return; const e=extra||{};
-  const w={id:'w'+Date.now().toString(36)+Math.random().toString(36).slice(2,4),title:t,type:(e.type==='tv'?'tv':'movie'),year:e.year||'',genre:e.genre||'',poster:e.poster||'',service:'',vibe:'',created:Date.now(),updated:Date.now()};
+  const w={id:'w'+Date.now().toString(36)+Math.random().toString(36).slice(2,4),title:t,type:(e.type==='tv'?'tv':'movie'),tmdbId:e.tmdbId||0,year:e.year||'',genre:e.genre||'',poster:e.poster||'',service:'',vibe:'',created:Date.now(),updated:Date.now()};
   if(!Array.isArray(data.watchlist)) data.watchlist=[];
   data.watchlist.unshift(w); newFormOpen=false; pendingPick=null; pendingCover=null; pendingType='movie'; scheduleSave(); render(); toast('Added to your list'); }
 function delWatch(id){ const w=(data.watchlist||[]).find(x=>x.id===id); if(!w) return;
@@ -683,7 +771,7 @@ function setWLVibe(id){ const w=(data.watchlist||[]).find(x=>x.id===id); if(!w) 
   const v=prompt('Vibe / tag (e.g. cozy, date night, mind-bender)', w.vibe||''); if(v===null) return; w.vibe=v.trim(); w.updated=now(); scheduleSave(); render(); }
 function watchToLibrary(id){ const w=(data.watchlist||[]).find(x=>x.id===id); if(!w) return;
   data.watchlist=data.watchlist.filter(x=>x.id!==id); (data.deleted=data.deleted||[]).push(id); activeTab='chad';
-  addMovie(w.title,'',{type:w.type,year:w.year,genre:w.genre,poster:w.poster}); }
+  addMovie(w.title,'',{type:w.type,year:w.year,genre:w.genre,poster:w.poster,tmdbId:w.tmdbId}); }
 function wlTagList(){ const s=new Set(); (data.watchlist||[]).forEach(w=>{ if(w.genre) s.add(w.genre); if(w.vibe) s.add(w.vibe); }); return [...s].sort(); }
 function visibleWatch(){ let arr=(data.watchlist||[]).slice();
   if(wlService!=='all') arr=arr.filter(w=>w.service===wlService);
@@ -711,6 +799,7 @@ function watchCardHTML(w){
       <div class="gtags">${w.type==='tv'?'<span class="tvbadge">TV</span>':''}${w.genre?`<span class="gchip">${esc(w.genre)}</span>`:''}${w.vibe?`<button class="gchip vibe" data-act="wlvibe" data-id="${w.id}">${esc(w.vibe)}</button>`:`<button class="gchip empty" data-act="wlvibe" data-id="${w.id}">＋ vibe</button>`}</div>
       <div class="wlrow"><select class="wlservice" data-act="wlservice" data-id="${w.id}" aria-label="Streaming service">${svcOpts}</select></div>
       <div class="wlacts">
+        ${trailerBtn(w)}
         <button class="mini" data-act="wlwatched" data-id="${w.id}">✓ Watched → rate</button>
         <button class="mini danger" data-act="wldel" data-id="${w.id}">Remove</button>
       </div>
@@ -719,10 +808,10 @@ function watchCardHTML(w){
 function listPanel(){
   const wl=data.watchlist||[];
   const intro=`<div class="listintro"><div class="li-h">Your watch list</div><div class="li-p">Films &amp; shows you both want to get to. Tap ＋ to add, set where it's streaming and a vibe, then "Watched → rate" once you've seen it.</div></div>`;
-  if(!wl.length) return intro+`<div class="empty"><div class="big">Nothing on the list yet</div><div class="small">Add something you want<br>to watch together.</div></div>`;
+  if(!wl.length) return intro+`<div class="empty"><div class="big">Nothing on the list yet</div><div class="small">Add something you want<br>to watch together.</div></div>`+recsSectionHTML();
   const vis=visibleWatch();
   const body=vis.length?vis.map(watchCardHTML).join(''):`<div class="nomatch">Nothing matches these filters.</div>`;
-  return intro+listControlsHTML()+`<div class="lib">${body}</div>`;
+  return intro+listControlsHTML()+`<div class="lib">${body}</div>`+recsSectionHTML();
 }
 
 /* ---------- render ---------- */
@@ -847,6 +936,7 @@ function detailHTML(p,m){
       <textarea class="notes" id="notes-${p}" data-person="${p}" placeholder="Best scene, gripes, who picked it…">${esc(r.notes)}</textarea></div>
     ${guestSectionHTML(m)}
     <div class="card-foot">
+      ${trailerBtn(m)}
       <button class="mini" data-act="rename" data-id="${m.id}">Rename</button>
       <button class="mini" data-act="cover" data-id="${m.id}">${m.poster?'Change cover':'Add cover'}</button>
       <button class="mini danger" data-act="delete" data-id="${m.id}">Remove</button>
@@ -903,6 +993,7 @@ function sharedPanel(){
         ${guestBars}
       </div>${predline}${recline}${notes}
       <div class="filmrow-foot"><button class="mini" data-act="rate" data-id="${m.id}">Open &amp; rate</button>
+        ${trailerBtn(m)}
         <button class="mini" data-act="rename" data-id="${m.id}">Rename</button>
         <button class="mini danger" data-act="delete" data-id="${m.id}">Remove</button></div></div>`; }).join('');
   return stats+controlsHTML()+(rows||`<div class="nomatch">Nothing matches these filters.</div>`)+syncToolsHTML()+dataToolsHTML();
@@ -940,7 +1031,7 @@ function renderSuggest(list){
 }
 function pickSuggest(i){
   const m=suggList[i]; if(!m) return;
-  pendingPick={title:m.title,year:m.year||'',genre:m.genre||'',poster:m.poster||'',type:m.type||'movie'};
+  pendingPick={title:m.title,year:m.year||'',genre:m.genre||'',poster:m.poster||'',type:m.type||'movie',tmdbId:m.tmdbId||0};
   pendingType=m.type==='tv'?'tv':'movie';
   const nt=document.getElementById('newTitle'); if(nt) nt.value=m.title;
   const box=document.getElementById('suggBox'); if(box){ box.innerHTML=''; box.classList.remove('open'); }
@@ -1091,6 +1182,9 @@ function wire(){
   root.querySelectorAll('[data-act="wlvibe"]').forEach(b=>b.addEventListener('click',()=>setWLVibe(b.dataset.id)));
   root.querySelectorAll('[data-act="wlwatched"]').forEach(b=>b.addEventListener('click',()=>watchToLibrary(b.dataset.id)));
   root.querySelectorAll('[data-act="wldel"]').forEach(b=>b.addEventListener('click',()=>delWatch(b.dataset.id)));
+  root.querySelectorAll('[data-act="trailer"]').forEach(b=>b.addEventListener('click',()=>openTrailer({tmdbId:+b.dataset.tmdb||0,type:b.dataset.ttype,title:b.dataset.title})));
+  root.querySelectorAll('[data-act="loadrecs"]').forEach(b=>b.addEventListener('click',loadRecs));
+  root.querySelectorAll('[data-act="addrec"]').forEach(b=>b.addEventListener('click',()=>addRecToList(b.dataset)));
   root.querySelectorAll('[data-act="rename"]').forEach(b=>b.addEventListener('click',()=>renameMovie(b.dataset.id)));
   root.querySelectorAll('[data-act="genre"]').forEach(b=>b.addEventListener('click',()=>editGenre(b.dataset.id)));
   root.querySelectorAll('[data-act="cover"]').forEach(b=>b.addEventListener('click',()=>pickCover(b.dataset.id)));

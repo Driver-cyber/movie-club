@@ -30,6 +30,7 @@ async function fromTMDB(q, key) {
     .slice(0, 10)
     .map(m => ({
       id: 'tmdb' + m.media_type + m.id,
+      tmdbId: m.id,
       type: m.media_type === 'tv' ? 'tv' : 'movie',
       title: m.title || m.name || m.original_title || m.original_name || '',
       year: ((m.release_date || m.first_air_date) || '').slice(0, 4),
@@ -45,6 +46,7 @@ async function fromITunes(q) {
   const d = await r.json();
   return (d.results || []).map(m => ({
     id: 'itunes' + m.trackId,
+    tmdbId: 0,
     type: 'movie',
     title: m.trackName || '',
     year: (m.releaseDate || '').slice(0, 4),
