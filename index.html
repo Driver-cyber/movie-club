@@ -441,7 +441,7 @@ let data={movies:[]};
 let selectedId=null, activeTab='chad', sortMode='recent', newFormOpen=false;
 let genreFilter='all', typeFilter='all', listView=true;
 let wlService='all', wlTag='all';
-let saveTimer=null, source='memory', syncBox='';
+let saveTimer=null, source='memory', syncBox='', cloudErr='';
 let suggTimer=null, suggList=[], pendingPick=null, pendingCover=null, pendingType='movie';
 const MAX_FAV=8;
 const SERVICES=['Netflix','Prime Video','Apple TV+','Disney+','Max','Hulu','Peacock','Paramount+','In theaters','Rent/Buy','Other'];
@@ -497,12 +497,21 @@ async function manualPull(){
   try{
     const r=await fetch(`${API}?box=${encodeURIComponent(syncBox)}`,{cache:'no-store'});
     let j=null; try{ j=await r.json(); }catch(e){}
-    if(r.ok && j && Array.isArray(j.movies)){ data=mergeData(data,j); normalize(); mirrorLocal(); source='server';
+    if(r.ok && j && Array.isArray(j.movies)){ data=mergeData(data,j); normalize(); mirrorLocal(); source='server'; cloudErr='';
       if(selectedId&&!getMovie(selectedId)) selectedId=data.movies[0]?.id||null; render(); toast('Up to date'); return; }
     source='local';
-    if(r.status===404 || (j&&/not found/.test(j.error||''))){ render(); toast('Cloud store missing — Turn off, then Start a new list'); return; }
-    render(); toast('Cloud unavailable ('+(r.status||'?')+') — data safe on this phone'); return;
-  }catch(e){ source='local'; render(); toast('No connection — data safe on this phone'); }
+    if(r.status===404 || (j&&/not found/.test(j.error||''))){ cloudErr='missing'; render(); toast('Cloud store missing — recover below'); return; }
+    cloudErr='down'; render(); toast('Cloud unavailable ('+(r.status||'?')+') — data safe on this phone'); return;
+  }catch(e){ source='local'; cloudErr='offline'; render(); toast('No connection — data safe on this phone'); }
+}
+async function recreateStore(){
+  if(!confirm('Create a FRESH cloud store from the movies on THIS phone and get a new code to share?\n\nDo this on ONE phone only — the other phone should then JOIN the new code.')) return;
+  toast('Creating a fresh store…');
+  try{ const r=await fetch(API,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(data)});
+    const j=await r.json().catch(()=>null);
+    if(r.ok&&j&&j.box){ saveSyncBox(j.box); source='server'; cloudErr=''; render();
+      copyLink(location.origin+'/?sync='+encodeURIComponent(j.box),'Fresh store created — new invite link copied'); return; } }catch(e){}
+  toast('Could not create — try again in a moment');
 }
 /* gentle background pull so the other phone's changes appear on their own */
 async function pollSync(){
@@ -510,8 +519,9 @@ async function pollSync(){
   const ae=document.activeElement; if(ae&&/INPUT|TEXTAREA|SELECT/.test(ae.tagName)) return;
   try{ const r=await fetch(`${API}?box=${encodeURIComponent(syncBox)}`,{cache:'no-store'}); if(!r.ok) return;
     const j=await r.json(); if(!j||!Array.isArray(j.movies)) return;
+    const hadErr=cloudErr; cloudErr=''; source='server';
     const before=JSON.stringify(data); data=mergeData(data,j); normalize();
-    if(JSON.stringify(data)!==before){ mirrorLocal(); if(selectedId&&!getMovie(selectedId)) selectedId=data.movies[0]?.id||null; render(); }
+    if(JSON.stringify(data)!==before || hadErr){ mirrorLocal(); if(selectedId&&!getMovie(selectedId)) selectedId=data.movies[0]?.id||null; render(); }
   }catch(e){}
 }
 
@@ -1138,7 +1148,10 @@ function syncToolsHTML(){
     const url=location.origin+'/?sync='+encodeURIComponent(syncBox);
     return `<div class="syncbox">
       <div class="syncbox-h">✓ Cross-phone sync is on</div>
-      ${source!=='server'?`<div class="syncwarn">⚠ Can't reach the cloud right now — your changes are safe on this phone and will sync when it's back. Tap ↻ Refresh to retry.</div>`:''}
+      ${cloudErr==='missing'
+        ?`<div class="syncwarn">⚠ The cloud store for this code was lost — your movies are safe on this phone. <b>One phone</b> taps <button class="mini" data-act="recreate" style="margin:6px 4px 0 0">Start a fresh store</button> and shares the new link; the <b>other</b> taps <button class="mini" data-act="adopt" style="margin-top:6px">Join that new code</button>.</div>`
+        : source!=='server'
+        ?`<div class="syncwarn">⚠ Can't reach the cloud right now — your changes are safe on this phone and will sync when it's back. Tap ↻ Refresh to retry.</div>`:''}
       <div class="syncbox-p">Add your other phone: send this invite link, or have them tap “Join” and enter the code. Make sure <b>both phones show this same code</b>.</div>
       <div class="synccode">${esc(syncBox)}</div>
       <div class="syncbtns">
@@ -1218,6 +1231,7 @@ function wire(){
   root.querySelectorAll('[data-act="adopt"]').forEach(b=>b.addEventListener('click',()=>adoptSync(prompt('Paste the sync code (or invite link) from your other phone:'))));
   root.querySelectorAll('[data-act="refresh"]').forEach(b=>b.addEventListener('click',manualPull));
   root.querySelectorAll('[data-act="mergein"]').forEach(b=>b.addEventListener('click',()=>mergeFrom(prompt("Paste the OTHER phone's code or invite link to pull its movies into this list:"))));
+  root.querySelectorAll('[data-act="recreate"]').forEach(b=>b.addEventListener('click',recreateStore));
   root.querySelectorAll('[data-act="copylink"]').forEach(b=>b.addEventListener('click',()=>copyLink(b.dataset.link)));
   root.querySelectorAll('[data-act="gadd"]').forEach(b=>b.addEventListener('click',()=>addGuest(b.dataset.id)));
   root.querySelectorAll('[data-act="gcopy"]').forEach(b=>b.addEventListener('click',()=>copyLink(b.dataset.link,'Guest link copied')));
