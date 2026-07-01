@@ -507,11 +507,10 @@ async function manualPull(){
 async function recreateStore(){
   if(!confirm('Create a FRESH cloud store from the movies on THIS phone and get a new code to share?\n\nDo this on ONE phone only — the other phone should then JOIN the new code.')) return;
   toast('Creating a fresh store…');
-  try{ const r=await fetch(API,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(data)});
-    const j=await r.json().catch(()=>null);
-    if(r.ok&&j&&j.box){ saveSyncBox(j.box); source='server'; cloudErr=''; render();
-      copyLink(location.origin+'/?sync='+encodeURIComponent(j.box),'Fresh store created — new invite link copied'); return; } }catch(e){}
-  toast('Could not create — try again in a moment');
+  const box=await createBox();
+  if(box){ saveSyncBox(box); source='server'; cloudErr=''; render();
+    copyLink(location.origin+'/?sync='+encodeURIComponent(box),'Fresh store created — new invite link copied'); return; }
+  toast('Cloud is down right now — try again shortly, or set up KV');
 }
 /* gentle background pull so the other phone's changes appear on their own */
 async function pollSync(){
@@ -526,15 +525,21 @@ async function pollSync(){
 }
 
 /* ---------- cross-phone sync (no account) ---------- */
+async function createBox(){    // POST current data to make a store; retry through transient failures
+  for(let i=0;i<4;i++){
+    try{ const r=await fetch(API,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(data)});
+      const j=await r.json().catch(()=>null);
+      if(r.ok&&j&&j.box) return j.box; }catch(e){}
+    if(i<3){ toast('Cloud busy — retrying…'); await new Promise(res=>setTimeout(res,700*(i+1))); }
+  }
+  return '';
+}
 async function enableSync(){
   if(!confirm("Start a BRAND-NEW shared list?\n\nOnly do this if you're the first one setting up sharing. If your partner already started, tap Cancel and use their invite link or code instead — otherwise you'll each be on a separate list.")) return;
   toast('Setting up sync…');
-  try{
-    const r=await fetch(API,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(data)});
-    const j=await r.json().catch(()=>null);
-    if(r.ok&&j&&j.box){ saveSyncBox(j.box); source='server'; toast('Sync is on'); render(); return; }
-  }catch(e){}
-  toast('Could not start sync — try again');
+  const box=await createBox();
+  if(box){ saveSyncBox(box); source='server'; cloudErr=''; toast('Sync is on'); render(); return; }
+  toast('Cloud unavailable right now — try again in a minute');
 }
 async function adoptSync(code){
   const id=(code||'').trim().replace(/.*\/?sync=/,''); if(!id) return;
