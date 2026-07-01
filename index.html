@@ -252,6 +252,8 @@
     border-radius:13px;padding:16px;margin-top:18px}
   .syncbox-h{font-family:var(--mono);font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:var(--gold);margin-bottom:8px}
   .syncbox-p{font-family:var(--serif);font-size:14.5px;color:var(--bone-dim);line-height:1.5;margin-bottom:12px}
+  .syncwarn{font-family:var(--mono);font-size:10.5px;line-height:1.6;color:var(--gold);background:rgba(224,178,92,0.08);
+    border:1px solid var(--gold-dim);border-radius:9px;padding:9px 11px;margin-bottom:12px}
   .synccode{font-family:var(--mono);font-size:13px;color:var(--bone);background:var(--ink);
     border:1px dashed var(--line-strong);border-radius:9px;padding:11px 12px;word-break:break-all;
     margin-bottom:12px;text-align:center;letter-spacing:0.04em}
@@ -492,10 +494,15 @@ async function mergeFrom(code){
 async function manualPull(){
   if(!syncBox){ toast('Sync is off'); return; }
   toast('Refreshing…');
-  try{ const r=await fetch(`${API}?box=${encodeURIComponent(syncBox)}`,{cache:'no-store'}); if(r.ok){ const j=await r.json();
-    if(j&&Array.isArray(j.movies)){ data=mergeData(data,j); normalize(); mirrorLocal();
-      if(selectedId&&!getMovie(selectedId)) selectedId=data.movies[0]?.id||null; render(); toast('Up to date'); return; } } }catch(e){}
-  toast('Could not refresh — try again');
+  try{
+    const r=await fetch(`${API}?box=${encodeURIComponent(syncBox)}`,{cache:'no-store'});
+    let j=null; try{ j=await r.json(); }catch(e){}
+    if(r.ok && j && Array.isArray(j.movies)){ data=mergeData(data,j); normalize(); mirrorLocal(); source='server';
+      if(selectedId&&!getMovie(selectedId)) selectedId=data.movies[0]?.id||null; render(); toast('Up to date'); return; }
+    source='local';
+    if(r.status===404 || (j&&/not found/.test(j.error||''))){ render(); toast('Cloud store missing — Turn off, then Start a new list'); return; }
+    render(); toast('Cloud unavailable ('+(r.status||'?')+') — data safe on this phone'); return;
+  }catch(e){ source='local'; render(); toast('No connection — data safe on this phone'); }
 }
 /* gentle background pull so the other phone's changes appear on their own */
 async function pollSync(){
@@ -1131,6 +1138,7 @@ function syncToolsHTML(){
     const url=location.origin+'/?sync='+encodeURIComponent(syncBox);
     return `<div class="syncbox">
       <div class="syncbox-h">✓ Cross-phone sync is on</div>
+      ${source!=='server'?`<div class="syncwarn">⚠ Can't reach the cloud right now — your changes are safe on this phone and will sync when it's back. Tap ↻ Refresh to retry.</div>`:''}
       <div class="syncbox-p">Add your other phone: send this invite link, or have them tap “Join” and enter the code. Make sure <b>both phones show this same code</b>.</div>
       <div class="synccode">${esc(syncBox)}</div>
       <div class="syncbtns">
