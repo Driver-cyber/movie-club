@@ -109,7 +109,8 @@ const CATEGORIES=[
 ];
 const PRED_WORDS=['Not rated','Totally predictable','Predictable','Even odds','Surprising','Genuinely shocking'];
 const qs=new URLSearchParams(location.search);
-const box=(qs.get('box')||'').trim(), mid=(qs.get('m')||'').trim(), gid=(qs.get('gid')||'').trim();
+const box=(qs.get('box')||'').trim(); let mid=(qs.get('m')||'').trim(); const gid=(qs.get('gid')||'').trim();
+const wantTitle=(qs.get('t')||'').trim();
 let data=null, movie=null, name=(qs.get('n')||'').trim(), r=blank(), submitting=false;
 
 function blank(){ const o={notes:''}; CATEGORIES.forEach(c=>o[c.key]=0); return o; }
@@ -118,15 +119,18 @@ function esc(s){ return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>
 function stateScreen(big,small){ document.getElementById('root').innerHTML=
   `<div class="state"><div class="big">${big}</div><div class="small">${small}</div><a class="applink" href="/">Open Movie Club</a></div>`; }
 
+async function fetchBox(){ try{ const res=await fetch(`${API}?box=${encodeURIComponent(box)}`,{cache:'no-store'}); const j=await res.json(); if(j&&Array.isArray(j.movies)) return j; }catch(e){} return null; }
+function findMovie(j){ let mv=j.movies.find(m=>m.id===mid); if(!mv&&wantTitle) mv=j.movies.find(m=>(m.title||'').trim().toLowerCase()===wantTitle.toLowerCase()); return mv||null; }
 async function boot(){
   if(!box||!mid){ stateScreen('Invalid link','This guest link is missing some details.<br>Ask your host to send a fresh one.'); return; }
-  try{
-    const res=await fetch(`${API}?box=${encodeURIComponent(box)}`,{cache:'no-store'});
-    const j=await res.json();
-    if(j&&Array.isArray(j.movies)){ data=j; movie=j.movies.find(m=>m.id===mid)||null; }
-  }catch(e){}
-  if(!data){ stateScreen('Can’t reach the list','We couldn’t load the movie list right now.<br>Check your connection and reload.'); return; }
-  if(!movie){ stateScreen('Film not found','This film may have been removed.<br>Ask your host for a new link.'); return; }
+  let j=await fetchBox();
+  if(!j){ stateScreen('Can’t reach the list','We couldn’t load the movie list right now.<br>Check your connection and reload.'); return; }
+  data=j; movie=findMovie(j);
+  if(!movie){                       // the host's save may still be syncing — wait briefly and retry once
+    await new Promise(res=>setTimeout(res,1800)); j=await fetchBox(); if(j){ data=j; movie=findMovie(j); }
+  }
+  if(!movie){ stateScreen('Film not ready yet','This film hasn’t reached the shared list yet.<br>Ask your host to reopen Movie Club, then reload this page.'); return; }
+  if(movie.id!==mid) mid=movie.id;   // matched by title — use the real id
   // prefill from an existing guest entry if present
   const g=(movie.guests||[]).find(x=>x.id===gid);
   if(g){ if(g.name&&!name) name=g.name; CATEGORIES.forEach(c=>{ if(typeof g.ratings[c.key]==='number') r[c.key]=g.ratings[c.key]; }); r.notes=g.ratings.notes||''; }

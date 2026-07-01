@@ -481,6 +481,14 @@ async function saveData(){
     source='local'; toast('Saved on this iPhone');
   }catch(e){ source='local'; toast('Saved offline'); }
 }
+async function mergeFrom(code){
+  const id=(code||'').trim().replace(/.*\/?sync=/,'').replace(/.*\//,''); if(!id) return;
+  if(id===syncBox){ toast('That’s already this list'); return; }
+  toast('Merging…');
+  try{ const r=await fetch(`${API}?box=${encodeURIComponent(id)}`,{cache:'no-store'}); if(r.ok){ const j=await r.json();
+    if(j&&Array.isArray(j.movies)){ data=mergeData(data,j); normalize(); mirrorLocal(); scheduleSave(); render(); toast('Merged in — saving'); return; } } }catch(e){}
+  toast('Could not read that code');
+}
 async function manualPull(){
   if(!syncBox){ toast('Sync is off'); return; }
   toast('Refreshing…');
@@ -502,6 +510,7 @@ async function pollSync(){
 
 /* ---------- cross-phone sync (no account) ---------- */
 async function enableSync(){
+  if(!confirm("Start a BRAND-NEW shared list?\n\nOnly do this if you're the first one setting up sharing. If your partner already started, tap Cancel and use their invite link or code instead — otherwise you'll each be on a separate list.")) return;
   toast('Setting up sync…');
   try{
     const r=await fetch(API,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(data)});
@@ -675,7 +684,7 @@ function toggleVerdict(id){ const m=getMovie(id); if(!m) return; m.includeGuests
 
 /* ---------- guests (per movie, up to 3) ---------- */
 function guestLink(m,g){
-  return location.origin+'/rate.html?box='+encodeURIComponent(syncBox)+'&m='+encodeURIComponent(m.id)+'&gid='+encodeURIComponent(g.id)+(g.name?'&n='+encodeURIComponent(g.name):'');
+  return location.origin+'/rate.html?box='+encodeURIComponent(syncBox)+'&m='+encodeURIComponent(m.id)+'&gid='+encodeURIComponent(g.id)+'&t='+encodeURIComponent(m.title||'')+(g.name?'&n='+encodeURIComponent(g.name):'');
 }
 async function addGuest(id){
   const m=getMovie(id); if(!m) return;
@@ -688,8 +697,10 @@ async function addGuest(id){
   }
   const name=prompt('Guest name (e.g. Ashton)'); if(name===null) return;
   const g={id:'g'+Date.now().toString(36)+Math.random().toString(36).slice(2,4),name:(name||'').trim(),ratings:blankPerson(),updated:now()};
-  m.guests.push(g); m.updated=now(); scheduleSave(); render();
-  copyLink(guestLink(m,g),'Guest link copied — send it to '+(g.name||'your guest'));
+  m.guests.push(g); m.updated=now(); render();
+  clearTimeout(saveTimer); toast('Preparing link…'); await saveData();   // push the film+guest to the cloud FIRST
+  if(source==='server') copyLink(guestLink(m,g),'Guest link copied — send it to '+(g.name||'your guest'));
+  else toast('Saved on this phone — connect sync so guests can open the link');
 }
 function delGuest(id,gid){
   const m=getMovie(id); if(!m||!Array.isArray(m.guests)) return;
@@ -702,11 +713,15 @@ function setRating(id,p,cat,v){ const m=getMovie(id); if(!m) return;
 function setNotes(id,p,text){ const m=getMovie(id); if(!m) return; m.ratings[p].notes=text; m.ratings[p].updated=now(); scheduleSave(); }
 
 /* ---------- trailers (in-app YouTube) ---------- */
+let scrollLockY=0;
+function lockScroll(){ scrollLockY=window.scrollY||window.pageYOffset||0;
+  const b=document.body.style; b.position='fixed'; b.top=`-${scrollLockY}px`; b.left='0'; b.right='0'; b.width='100%'; }
+function unlockScroll(){ const b=document.body.style; b.position=''; b.top=''; b.left=''; b.right=''; b.width=''; window.scrollTo(0,scrollLockY); }
 function trailerBtn(o,cls){ return `<button class="${cls||'mini'}" data-act="trailer" data-tmdb="${o.tmdbId||0}" data-ttype="${o.type||'movie'}" data-title="${esc(o.title)}">▶ Trailer</button>`; }
 async function openTrailer(opts){
   const el=document.getElementById('trailer'); if(!el) return;
   el.innerHTML=`<div class="tr-back" data-act="trclose"></div><div class="tr-box"><button class="tr-x" data-act="trclose">✕</button><div class="tr-load">Loading trailer…</div></div>`;
-  el.classList.add('show');
+  el.classList.add('show'); lockScroll();
   el.querySelectorAll('[data-act="trclose"]').forEach(b=>b.addEventListener('click',closeTrailer));
   let qs='type='+encodeURIComponent(opts.type||'movie');
   qs += opts.tmdbId ? '&id='+encodeURIComponent(opts.tmdbId) : '&q='+encodeURIComponent(opts.title||'');
@@ -723,7 +738,7 @@ async function openTrailer(opts){
   }
   el.querySelectorAll('[data-act="trclose"]').forEach(b=>b.addEventListener('click',closeTrailer));
 }
-function closeTrailer(){ const el=document.getElementById('trailer'); if(!el) return; el.classList.remove('show'); el.innerHTML=''; }
+function closeTrailer(){ const el=document.getElementById('trailer'); if(!el) return; el.classList.remove('show'); el.innerHTML=''; unlockScroll(); }
 
 /* ---------- recommendations (TMDB) ---------- */
 let recsState=null;   // null | 'loading' | {items, seed}
@@ -1116,21 +1131,21 @@ function syncToolsHTML(){
     const url=location.origin+'/?sync='+encodeURIComponent(syncBox);
     return `<div class="syncbox">
       <div class="syncbox-h">✓ Cross-phone sync is on</div>
-      <div class="syncbox-p">Add your other phone: open this invite link on it, or enter the code by hand.</div>
+      <div class="syncbox-p">Add your other phone: send this invite link, or have them tap “Join” and enter the code. Make sure <b>both phones show this same code</b>.</div>
       <div class="synccode">${esc(syncBox)}</div>
       <div class="syncbtns">
         <button class="btn btn-add" data-act="copylink" data-link="${esc(url)}" style="min-height:44px">Copy invite link</button>
         <button class="mini" data-act="refresh">↻ Refresh now</button>
-        <button class="mini" data-act="adopt">Enter a code</button>
+        <button class="mini" data-act="mergein">Merge in another list</button>
         <button class="mini danger" data-act="syncoff">Turn off</button>
       </div></div>`;
   }
   return `<div class="syncbox">
     <div class="syncbox-h">Share with your other phone</div>
-    <div class="syncbox-p">Turn on sync here, then open the invite link on your partner's phone. No account, no setup — both phones share one list.</div>
+    <div class="syncbox-p">If your partner already started sharing, <b>join their list</b> with their link or code. Only start a new one if you're the first — otherwise you'll each be on a separate list.</div>
     <div class="syncbtns">
-      <button class="btn btn-add" data-act="syncon" style="min-height:46px">Turn on cross-phone sync</button>
-      <button class="mini" data-act="adopt">I already have a code</button>
+      <button class="btn btn-add" data-act="adopt" style="min-height:46px">Join your partner's list</button>
+      <button class="mini" data-act="syncon">Start a new shared list</button>
     </div></div>`;
 }
 
@@ -1194,6 +1209,7 @@ function wire(){
   root.querySelectorAll('[data-act="syncoff"]').forEach(b=>b.addEventListener('click',disconnectSync));
   root.querySelectorAll('[data-act="adopt"]').forEach(b=>b.addEventListener('click',()=>adoptSync(prompt('Paste the sync code (or invite link) from your other phone:'))));
   root.querySelectorAll('[data-act="refresh"]').forEach(b=>b.addEventListener('click',manualPull));
+  root.querySelectorAll('[data-act="mergein"]').forEach(b=>b.addEventListener('click',()=>mergeFrom(prompt("Paste the OTHER phone's code or invite link to pull its movies into this list:"))));
   root.querySelectorAll('[data-act="copylink"]').forEach(b=>b.addEventListener('click',()=>copyLink(b.dataset.link)));
   root.querySelectorAll('[data-act="gadd"]').forEach(b=>b.addEventListener('click',()=>addGuest(b.dataset.id)));
   root.querySelectorAll('[data-act="gcopy"]').forEach(b=>b.addEventListener('click',()=>copyLink(b.dataset.link,'Guest link copied')));
