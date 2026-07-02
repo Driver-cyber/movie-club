@@ -2,8 +2,9 @@ name = "movie-club"
 compatibility_date = "2024-11-01"
 pages_build_output_dir = "."
 
-# For local dev (`npx wrangler pages dev`) and/or config-driven binding.
-# In the dashboard you bind this under Settings -> Functions -> KV bindings instead.
-# [[kv_namespaces]]
-# binding = "MOVIE_CLUB"
-# id = "<your-kv-namespace-id>"
+# Durable storage: Cloudflare KV, bound via config so no dashboard binding is
+# needed. /api/data uses this automatically (jsonblob is only a fallback when
+# the binding is absent).
+[[kv_namespaces]]
+binding = "MOVIE_CLUB"
+id = "76de1dbf35934161aaa55002dbd3e878"
