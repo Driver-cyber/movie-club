@@ -452,7 +452,9 @@ const SEARCH='/api/search';
 const TRAILER='/api/trailer';
 const RECS='/api/recs';
 const LKEY='movieclub:data';
-const SBKEY='movieclub:syncbox';   // shared "box" id for cross-phone sync
+/* The club's one shared store — the KV key everything saves under. Every
+   device uses it automatically; no join/turn-on flow needed. */
+const DEFAULT_BOX='019f10d7-469f-7e40-972f-962f73fb3a70';
 const SCHEMA_VERSION=1;   // bump when the data shape changes; import normalizes forward
 const CATEGORIES=[
   {key:'plot',               label:'Plot',               desc:'story · structure'},
@@ -493,7 +495,7 @@ let selectedId=null, activeTab='chad', sortMode='recent', newFormOpen=false;
 let genreFilter='all', typeFilter='all', listView=true, membersOpen=false;
 let wlService='all', wlTag='all';
 let postDraft='', postTags=new Set(), boardSearch='', boardMovies=new Set(), boardGeneral=false, boardFiltersOpen=false;
-let saveTimer=null, source='memory', syncBox='', cloudErr='', viewerMode='';
+let saveTimer=null, source='memory', syncBox=DEFAULT_BOX, cloudErr='', viewerMode='';
 let suggTimer=null, suggList=[], pendingPick=null, pendingCover=null, pendingType='movie';
 const MAX_FAV=8;
 const SERVICES=['Netflix','Prime Video','Apple TV+','Disney+','Max','Hulu','Peacock','Paramount+','In theaters','Rent/Buy','Other'];
@@ -501,8 +503,6 @@ const SERVICES=['Netflix','Prime Video','Apple TV+','Disney+','Max','Hulu','Peac
 /* ---------- storage ---------- */
 function mirrorLocal(){ try{ localStorage.setItem(LKEY, JSON.stringify(data)); }catch(e){} }
 function readLocal(){ try{ const s=localStorage.getItem(LKEY); if(s){ const j=JSON.parse(s); if(j&&Array.isArray(j.movies)) return j; } }catch(e){} return null; }
-function loadSyncBox(){ try{ return localStorage.getItem(SBKEY)||''; }catch(e){ return ''; } }
-function saveSyncBox(id){ syncBox=id||''; try{ if(id) localStorage.setItem(SBKEY,id); else localStorage.removeItem(SBKEY); }catch(e){} }
 
 async function loadData(){
   const local=readLocal();
@@ -535,34 +535,15 @@ async function saveData(){
     source='local'; toast('Saved on this iPhone');
   }catch(e){ source='local'; toast('Saved offline'); }
 }
-async function mergeFrom(code){
-  const id=(code||'').trim().replace(/.*\/?sync=/,'').replace(/.*\//,''); if(!id) return;
-  if(id===syncBox){ toast('That’s already this list'); return; }
-  toast('Merging…');
-  try{ const r=await fetch(`${API}?box=${encodeURIComponent(id)}`,{cache:'no-store'}); if(r.ok){ const j=await r.json();
-    if(j&&Array.isArray(j.movies)){ data=mergeData(data,j); normalize(); mirrorLocal(); scheduleSave(); render(); toast('Merged in — saving'); return; } } }catch(e){}
-  toast('Could not read that code');
-}
 async function manualPull(){
-  if(!syncBox){ toast('Sync is off'); return; }
   toast('Refreshing…');
   try{
     const r=await fetch(`${API}?box=${encodeURIComponent(syncBox)}`,{cache:'no-store'});
     let j=null; try{ j=await r.json(); }catch(e){}
     if(r.ok && j && Array.isArray(j.movies)){ data=mergeData(data,j); normalize(); mirrorLocal(); source='server'; cloudErr='';
       if(selectedId&&!getMovie(selectedId)) selectedId=data.movies[0]?.id||null; render(); toast('Up to date'); return; }
-    source='local';
-    if(r.status===404 || (j&&/not found/.test(j.error||''))){ cloudErr='missing'; render(); toast('Cloud store missing — recover below'); return; }
-    cloudErr='down'; render(); toast('Cloud unavailable ('+(r.status||'?')+') — data safe on this phone'); return;
+    source='local'; cloudErr='down'; render(); toast('Cloud unavailable ('+(r.status||'?')+') — data safe on this phone'); return;
   }catch(e){ source='local'; cloudErr='offline'; render(); toast('No connection — data safe on this phone'); }
-}
-async function recreateStore(){
-  if(!confirm('Create a FRESH cloud store from the movies on THIS phone and get a new code to share?\n\nDo this on ONE phone only — the other phone should then JOIN the new code.')) return;
-  toast('Creating a fresh store…');
-  const box=await createBox();
-  if(box){ saveSyncBox(box); source='server'; cloudErr=''; render();
-    copyLink(location.origin+'/?sync='+encodeURIComponent(box),'Fresh store created — new invite link copied'); return; }
-  toast('Cloud is down right now — try again shortly, or set up KV');
 }
 /* gentle background pull so the other phone's changes appear on their own */
 async function pollSync(){
@@ -576,35 +557,6 @@ async function pollSync(){
   }catch(e){}
 }
 
-/* ---------- cross-phone sync (no account) ---------- */
-async function createBox(){    // POST current data to make a store; retry through transient failures
-  for(let i=0;i<4;i++){
-    try{ const r=await fetch(API,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(data)});
-      const j=await r.json().catch(()=>null);
-      if(r.ok&&j&&j.box) return j.box; }catch(e){}
-    if(i<3){ toast('Cloud busy — retrying…'); await new Promise(res=>setTimeout(res,700*(i+1))); }
-  }
-  return '';
-}
-async function enableSync(){
-  if(!confirm("Start a BRAND-NEW shared list?\n\nOnly do this if you're the first one setting up sharing. If your partner already started, tap Cancel and use their invite link or code instead — otherwise you'll each be on a separate list.")) return;
-  toast('Setting up sync…');
-  const box=await createBox();
-  if(box){ saveSyncBox(box); source='server'; cloudErr=''; toast('Sync is on'); render(); return; }
-  toast('Cloud unavailable right now — try again in a minute');
-}
-async function adoptSync(code){
-  const id=(code||'').trim().replace(/.*\/?sync=/,''); if(!id) return;
-  if(data.movies.length && !confirm("Join the shared list on this phone? Films already on this phone are combined into it (nothing is deleted).")) return;
-  saveSyncBox(id);
-  await loadData();
-  selectedId=data.movies[0]?data.movies[0].id:null;
-  render(); toast(source==='server'?'Connected to shared list':'Saved code — could not reach it yet');
-}
-function disconnectSync(){
-  if(!confirm('Stop syncing on this phone? Your films stay saved here, just not shared.')) return;
-  saveSyncBox(''); source=data.movies.length?'local':'memory'; render(); toast('Sync turned off');
-}
 function copyLink(link,msg){
   const ok=msg||'Invite link copied';
   try{ navigator.clipboard.writeText(link).then(()=>toast(ok),()=>prompt('Copy this link:',link)); }
@@ -769,13 +721,11 @@ function toggleVerdict(id){ const m=getMovie(id); if(!m) return; m.includeGuests
 
 /* ---------- members (everyone has their own link) ---------- */
 function memberLink(slug){
-  return location.origin+'/?sync='+encodeURIComponent(syncBox)+'&viewer='+encodeURIComponent(slug);
+  return location.origin+'/?viewer='+encodeURIComponent(slug);
 }
 function membersHTML(){
   if(viewerMode) return '';
-  const body = !syncBox
-    ? `<div class="syncbox-p">Turn on sync first — member links carry the shared list.</div>`
-    : !membersOpen
+  const body = !membersOpen
     ? `<div class="syncbtns"><button class="btn btn-add" data-act="members" style="min-height:44px">Show member links</button></div>`
     : `<div class="memlist">${Object.keys(VIEWERS).map(s=>`<div class="memrow">
           <div class="meminfo"><span class="memglyph">${esc(PEOPLE[s][0])}</span><span class="memname">${esc(PEOPLE[s])}</span></div>
@@ -1277,30 +1227,11 @@ function dataToolsHTML(){
     <div class="datahint">Back up your ratings to a file, or restore them — handy when rolling forward to new versions.</div>`;
 }
 function syncToolsHTML(){
-  if(syncBox){
-    const url=location.origin+'/?sync='+encodeURIComponent(syncBox);
-    return `<div class="syncbox">
-      <div class="syncbox-h">✓ Cross-phone sync is on</div>
-      ${cloudErr==='missing'
-        ?`<div class="syncwarn">⚠ The cloud store for this code was lost — your movies are safe on this phone. <b>One phone</b> taps <button class="mini" data-act="recreate" style="margin:6px 4px 0 0">Start a fresh store</button> and shares the new link; the <b>other</b> taps <button class="mini" data-act="adopt" style="margin-top:6px">Join that new code</button>.</div>`
-        : source!=='server'
-        ?`<div class="syncwarn">⚠ Can't reach the cloud right now — your changes are safe on this phone and will sync when it's back. Tap ↻ Refresh to retry.</div>`:''}
-      <div class="syncbox-p">Add your other phone: send this invite link, or have them tap “Join” and enter the code. Make sure <b>both phones show this same code</b>.</div>
-      <div class="synccode">${esc(syncBox)}</div>
-      <div class="syncbtns">
-        <button class="btn btn-add" data-act="copylink" data-link="${esc(url)}" style="min-height:44px">Copy invite link</button>
-        <button class="mini" data-act="refresh">↻ Refresh now</button>
-        ${viewerMode?'':`<button class="mini" data-act="mergein">Merge in another list</button>`}
-        <button class="mini danger" data-act="syncoff">Turn off</button>
-      </div></div>`;
-  }
   return `<div class="syncbox">
-    <div class="syncbox-h">Share with your other phone</div>
-    <div class="syncbox-p">If your partner already started sharing, <b>join their list</b> with their link or code. Only start a new one if you're the first — otherwise you'll each be on a separate list.</div>
-    <div class="syncbtns">
-      <button class="btn btn-add" data-act="adopt" style="min-height:46px">Join your partner's list</button>
-      <button class="mini" data-act="syncon">Start a new shared list</button>
-    </div></div>`;
+    <div class="syncbox-h">${source==='server'?'✓ Club cloud · synced for everyone':'☁ Club cloud'}</div>
+    ${source!=='server'?`<div class="syncwarn">⚠ Can't reach the cloud right now — your changes are safe on this phone and will sync when it's back.</div>`:''}
+    <div class="syncbox-p">One shared library for the whole club. Saves sync automatically — no codes, no setup; just open your link.</div>
+    <div class="syncbtns"><button class="mini" data-act="refresh">↻ Refresh now</button></div></div>`;
 }
 
 /* ---------- events ---------- */
@@ -1359,12 +1290,7 @@ function wire(){
   root.querySelectorAll('[data-act="cover"]').forEach(b=>b.addEventListener('click',()=>pickCover(b.dataset.id)));
   root.querySelectorAll('[data-act="export"]').forEach(b=>b.addEventListener('click',exportData));
   root.querySelectorAll('[data-act="import"]').forEach(b=>b.addEventListener('click',importData));
-  root.querySelectorAll('[data-act="syncon"]').forEach(b=>b.addEventListener('click',enableSync));
-  root.querySelectorAll('[data-act="syncoff"]').forEach(b=>b.addEventListener('click',disconnectSync));
-  root.querySelectorAll('[data-act="adopt"]').forEach(b=>b.addEventListener('click',()=>adoptSync(prompt('Paste the sync code (or invite link) from your other phone:'))));
   root.querySelectorAll('[data-act="refresh"]').forEach(b=>b.addEventListener('click',manualPull));
-  root.querySelectorAll('[data-act="mergein"]').forEach(b=>b.addEventListener('click',()=>mergeFrom(prompt("Paste the OTHER phone's code or invite link to pull its movies into this list:"))));
-  root.querySelectorAll('[data-act="recreate"]').forEach(b=>b.addEventListener('click',recreateStore));
   root.querySelectorAll('[data-act="members"]').forEach(b=>b.addEventListener('click',()=>{membersOpen=!membersOpen;render();}));
   const pt=document.getElementById('postText');
   if(pt) pt.addEventListener('input',()=>{ postDraft=pt.value; });
@@ -1385,7 +1311,6 @@ function wire(){
   root.querySelectorAll('[data-act="memcopy"]').forEach(b=>b.addEventListener('click',()=>copyLink(b.dataset.link,`${b.dataset.name}'s link copied — send it over`)));
   root.querySelectorAll('[data-act="viewexit"]').forEach(b=>b.addEventListener('click',()=>{
     viewerMode=''; try{ localStorage.removeItem(VKEY); }catch(e){} activeTab='chad'; render(); }));
-  root.querySelectorAll('[data-act="copylink"]').forEach(b=>b.addEventListener('click',()=>copyLink(b.dataset.link)));
   root.querySelectorAll('[data-act="vtoggle"]').forEach(b=>b.addEventListener('click',()=>toggleVerdict(b.dataset.id)));
   root.querySelectorAll('[data-act="delete"]').forEach(b=>b.addEventListener('click',()=>deleteMovie(b.dataset.id)));
 }
@@ -1396,17 +1321,13 @@ document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==
 
 /* boot */
 (async function(){
-  syncBox=loadSyncBox();
   try{ viewerMode=localStorage.getItem(VKEY)||''; }catch(e){}
   try{ const u=new URL(location.href);
-    const incoming=(u.searchParams.get('sync')||'').trim();
     const vp=(u.searchParams.get('viewer')||'').trim();
-    if(incoming && incoming!==syncBox){
-      if(!syncBox || confirm('Open the shared movie list on this phone?')) saveSyncBox(incoming);
-    }
     if(vp&&VIEWERS[vp]){ viewerMode=vp; try{ localStorage.setItem(VKEY,vp); }catch(e){} }
-    if(incoming){ u.searchParams.delete('sync');           // keep ?viewer in the URL so
-      history.replaceState(null,'',u.pathname+(u.search||'')+u.hash); } // Add-to-Home-Screen keeps their view
+    if(u.searchParams.get('sync')!==null){ u.searchParams.delete('sync');   // old links carried the box id;
+      history.replaceState(null,'',u.pathname+(u.search||'')+u.hash); }     // the club box is built in now.
+    // ?viewer stays in the URL so Add-to-Home-Screen keeps their view
   }catch(e){}
   if(viewerMode && !VIEWERS[viewerMode]){ viewerMode=''; try{ localStorage.removeItem(VKEY); }catch(e){} }
   activeTab = viewerMode ? viewerMode : 'chad';
