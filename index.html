@@ -359,6 +359,16 @@
   .tr-load,.tr-none{background:var(--ink-2);border:1px solid var(--line-strong);border-radius:14px;padding:46px 22px;text-align:center;font-family:var(--mono);font-size:12px;color:var(--bone-dim);line-height:1.9}
   .tr-none a{color:var(--gold)}
 
+  /* first-visit guide popup */
+  #guidepop{position:fixed;inset:0;z-index:70;display:none;flex-direction:column;background:var(--ink)}
+  #guidepop.show{display:flex}
+  .gp-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-shrink:0;
+    padding:calc(var(--safe-top) + 10px) 14px 10px;background:var(--ink-2);border-bottom:1px solid var(--line-strong)}
+  .gp-t{font-family:var(--mono);font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:var(--gold)}
+  .gp-x{font-family:var(--mono);font-size:11px;font-weight:600;color:#fff;background:var(--rust);
+    border:none;border-radius:16px;padding:10px 15px;cursor:pointer;white-space:nowrap}
+  .gp-frame{flex:1;width:100%;border:0}
+
   /* bottom tab bar */
   .tabbar{position:fixed;left:0;right:0;bottom:0;z-index:20;
     background:linear-gradient(180deg,rgba(24,18,14,0.86),rgba(24,18,14,0.98));
@@ -407,6 +417,7 @@
 <div class="wrap" id="root"><div class="loading">Loading the reel…</div></div>
 <div id="toast"></div>
 <div id="trailer"></div>
+<div id="guidepop"></div>
 
 <script>
 /* ================= Movie Club — Chad & Joelle =================
@@ -444,6 +455,7 @@ const PRED_WEIGHT=0.5;
 const PEOPLE={chad:'Chad',joelle:'Joelle',alexander:'Alexander'};
 const COUPLE=['chad','joelle'];        // the default "Shared verdict" is just these two
 const VKEY='movieclub:viewer';         // restricted-view mode (Alexander's link)
+const GKEY='movieclub:alexguide';      // guide auto-shown once on Alexander's first visit
 const PRED_WORDS=['Not rated','Totally predictable','Predictable','Even odds','Surprising','Genuinely shocking'];
 
 let data={movies:[]};
@@ -772,6 +784,20 @@ async function openTrailer(opts){
   el.querySelectorAll('[data-act="trclose"]').forEach(b=>b.addEventListener('click',closeTrailer));
 }
 function closeTrailer(){ const el=document.getElementById('trailer'); if(!el) return; el.classList.remove('show'); el.innerHTML=''; unlockScroll(); }
+
+/* ---------- first-visit guide popup (Alexander's link) ---------- */
+function openGuidePop(){
+  const el=document.getElementById('guidepop'); if(!el) return;
+  try{ localStorage.setItem(GKEY,'1'); }catch(e){}
+  el.innerHTML=`<div class="gp-bar"><span class="gp-t">Welcome, Alexander 🎟</span>
+      <button class="gp-x" id="gpClose">Skip · start rating</button></div>
+    <iframe class="gp-frame" src="/guide.html" title="How Movie Club works"></iframe>`;
+  el.classList.add('show'); lockScroll();
+  const x=document.getElementById('gpClose'); if(x) x.addEventListener('click',closeGuidePop);
+}
+function closeGuidePop(){ const el=document.getElementById('guidepop'); if(!el) return;
+  el.classList.remove('show'); el.innerHTML=''; unlockScroll(); }
+window.addEventListener('message',e=>{ if(e&&e.data==='mc-close-guide') closeGuidePop(); });
 
 /* ---------- recommendations (TMDB) ---------- */
 let recsState=null;   // null | 'loading' | {items, seed}
@@ -1292,6 +1318,8 @@ document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==
   activeTab = viewerMode==='alexander' ? 'alexander' : 'chad';
   await loadData(); if(data.movies.length) selectedId=data.movies[0].id; render();
   if(syncBox) scheduleSave();                 // push any local-only items merged in at boot
+  if(viewerMode==='alexander'){ let seen=''; try{ seen=localStorage.getItem(GKEY)||''; }catch(e){}
+    if(!seen) openGuidePop(); }               // first visit on his link → walk him through it
   setInterval(pollSync, 25000);               // gentle auto-refresh from the other phone
   if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{}); })();
 </script>

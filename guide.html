@@ -470,6 +470,14 @@
   }
   addEventListener('scroll',onScroll,{passive:true});
   onScroll();
+  /* When shown inside the app's first-visit popup (iframe), "Close" and
+     "Open Movie Club" should dismiss the popup instead of navigating. */
+  if(window.self!==window.top){
+    document.addEventListener('click',function(ev){
+      var a=ev.target && ev.target.closest ? ev.target.closest('a[href="/"]') : null;
+      if(a){ ev.preventDefault(); try{ parent.postMessage('mc-close-guide','*'); }catch(e){} }
+    });
+  }
 })();
 </script>
 </body>
