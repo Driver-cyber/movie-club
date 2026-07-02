@@ -903,11 +903,14 @@ function render(){
     <nav class="tabbar"><div class="tabbar-inner">${tabsHTML()}</div></nav>`;
   wire();
 }
-function personTabList(){ return viewerMode==='alexander' ? ['alexander'] : ['chad','joelle','alexander']; }
+/* Alexander's tab lives only in his own view (?viewer=alexander link) — the
+   couple's bar stays Chad/Joelle/Shared/List. His ratings still surface on
+   Shared, and his view is reachable any time by opening his link. */
+function personTabList(){ return viewerMode==='alexander' ? ['alexander'] : ['chad','joelle']; }
 function tabsHTML(){
   const defs = viewerMode==='alexander'
     ? [['alexander','A','Alex'],['shared','★','Shared'],['list','✚','List']]
-    : [['chad','C','Chad'],['joelle','J','Joelle'],['alexander','A','Alex'],['shared','★','Shared'],['list','✚','List']];
+    : [['chad','C','Chad'],['joelle','J','Joelle'],['shared','★','Shared'],['list','✚','List']];
   return defs.map(d=>`<button class="tabbtn ${activeTab===d[0]?'active':''}" data-tab="${d[0]}"><span class="glyph">${d[1]}</span>${d[2]}</button>`).join('');
 }
 function movieSelectHTML(){
