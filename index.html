@@ -113,7 +113,8 @@
   .gchip{display:inline-flex;align-items:center;font-family:var(--mono);font-size:9.5px;font-weight:600;
     letter-spacing:0.12em;text-transform:uppercase;color:var(--gold);background:rgba(224,178,92,0.10);
     border:1px solid var(--gold-dim);border-radius:20px;padding:4px 11px;cursor:pointer;line-height:1.4}
-  .gchip.empty{color:var(--bone-faint);background:transparent;border-color:var(--line-strong)}
+  .gchip.empty{color:var(--bone-faint);background:transparent;border-color:var(--line-strong);
+    padding:4px 11px;text-align:left}   /* re-assert size: generic .empty (empty-state) also matches */
   .gchip:active{transform:translateY(1px)}
   span.gchip{cursor:default}
   .gchip:focus-visible{outline:2px solid var(--rust);outline-offset:2px}
@@ -330,6 +331,26 @@
   .gchip.vibe{color:var(--bone);border-color:var(--gold-dim);background:rgba(224,178,92,0.07)}
   .wlacts{display:flex;gap:7px;margin-top:4px;flex-wrap:wrap}
 
+  /* board */
+  .bcomposer{margin-bottom:14px}
+  .b-as{font-family:var(--mono);font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--bone-dim);margin-bottom:10px}
+  .b-as .qwho{font-size:11px}
+  .bcomposer textarea.notes{min-height:84px}
+  .b-taglbl{font-family:var(--mono);font-size:9.5px;letter-spacing:0.1em;text-transform:uppercase;color:var(--bone-faint);margin:11px 0 8px}
+  .chipcloud{display:flex;flex-wrap:wrap;gap:6px;max-height:132px;overflow-y:auto}
+  .mini-chip{font-size:10px;padding:6px 10px;min-height:32px}
+  .b-filters{margin-bottom:13px}
+  .bsearch{flex:1;min-width:0;background:var(--ink);color:var(--bone);font-family:var(--serif);font-size:15px;
+    border:1px solid var(--line-strong);border-radius:20px;padding:9px 14px;-webkit-appearance:none;appearance:none}
+  .bsearch:focus-visible{outline:2px solid var(--rust);outline-offset:1px}
+  .post{background:linear-gradient(180deg,var(--ink-2),var(--ink));border:1px solid var(--line);border-radius:13px;padding:13px 14px;margin-bottom:10px}
+  .post-head{display:flex;align-items:baseline;gap:9px}
+  .post-head .qwho{font-family:var(--mono);font-size:10px;letter-spacing:0.12em;text-transform:uppercase;font-weight:600}
+  .post-time{font-family:var(--mono);font-size:9px;color:var(--bone-faint);letter-spacing:0.05em}
+  .post-del{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--bone-faint);background:transparent;border:1px solid var(--line);border-radius:7px;padding:4px 9px;cursor:pointer}
+  .post-text{font-family:var(--serif);font-size:15.5px;line-height:1.55;color:var(--bone);margin-top:8px;white-space:pre-wrap;word-break:break-word}
+  .qwho.c{color:var(--rust)} .qwho.j{color:var(--gold)} .qwho.a{color:var(--sage)}
+
   /* recommendations */
   .recsbar{margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
   .recs-h{font-family:var(--mono);font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--bone-dim);margin-bottom:11px;display:flex;align-items:center;gap:8px}
@@ -395,6 +416,9 @@
   .tabbtn.member.active::before{background:var(--sage)}
   .tabbtn.member.active .glyph{border-color:var(--sage);color:var(--sage);background:rgba(122,154,90,0.12)}
   .tabbtn.member.active{color:var(--bone)}
+  .tabbtn[data-tab="board"].active::before{background:var(--gold)}
+  .tabbtn[data-tab="board"].active .glyph{border-color:var(--gold);color:var(--gold);background:rgba(224,178,92,0.12)}
+  .tabbtn[data-tab="board"].active{color:var(--bone)}
   .tabbtn .glyph{font-size:14px}
   .tabbtn:focus-visible{outline:2px solid var(--rust);outline-offset:-4px}
 
@@ -458,7 +482,8 @@ const MEMBERS={
   allison:'Allison', caleb:'Caleb', jhaylhin:'Jhay Lhin',
 };
 const PEOPLE={chad:'Chad',joelle:'Joelle',...MEMBERS};
-const COUPLE=['chad','joelle'];        // the default "Shared verdict" is just these two
+const VIEWERS={joelle:'Joelle',...MEMBERS};   // everyone with a URL view; no ?viewer = Chad's master view
+const COUPLE=['chad','joelle'];        // the default "Shared verdict" is still these two
 const VKEY='movieclub:viewer';         // restricted-view mode (a member's link)
 const GKEY='movieclub:memberguide';    // guide auto-shown once on a member's first visit
 const PRED_WORDS=['Not rated','Totally predictable','Predictable','Even odds','Surprising','Genuinely shocking'];
@@ -467,6 +492,7 @@ let data={movies:[]};
 let selectedId=null, activeTab='chad', sortMode='recent', newFormOpen=false;
 let genreFilter='all', typeFilter='all', listView=true, membersOpen=false;
 let wlService='all', wlTag='all';
+let postDraft='', postTags=new Set(), boardSearch='', boardMovies=new Set(), boardGeneral=false, boardFiltersOpen=false;
 let saveTimer=null, source='memory', syncBox='', cloudErr='', viewerMode='';
 let suggTimer=null, suggList=[], pendingPick=null, pendingCover=null, pendingType='movie';
 const MAX_FAV=8;
@@ -638,6 +664,15 @@ function normalize(){
     if(typeof w.created!=='number') w.created=0;
     if(typeof w.updated!=='number') w.updated=w.created||0;
   });
+  if(!Array.isArray(data.posts)) data.posts=[];
+  data.posts.forEach(p=>{
+    if(typeof p.id!=='string') p.id='p'+Math.random().toString(36).slice(2,8);
+    if(!PEOPLE[p.author]) p.author='chad';
+    if(typeof p.text!=='string') p.text='';
+    if(!Array.isArray(p.movieIds)) p.movieIds=[];
+    if(typeof p.created!=='number') p.created=0;
+    if(typeof p.updated!=='number') p.updated=p.created||0;
+  });
   if(!Array.isArray(data.deleted)) data.deleted=[];
 }
 /* ---------- sync merge (so two phones don't clobber each other) ---------- */
@@ -657,7 +692,8 @@ function mergeList(localArr,remoteArr,tomb,mergeItem){
   return out; }
 function mergeData(local,remote){ const tomb=new Set([...(local.deleted||[]),...(remote.deleted||[])]);
   return { movies:mergeList(local.movies,remote.movies,tomb,mergeMovie),
-    watchlist:mergeList(local.watchlist,remote.watchlist,tomb,null), deleted:[...tomb].slice(-1000) }; }
+    watchlist:mergeList(local.watchlist,remote.watchlist,tomb,null),
+    posts:mergeList(local.posts,remote.posts,tomb,null), deleted:[...tomb].slice(-1000) }; }
 function avgOf(r){ if(!r) return null; let sum=0,wsum=0;
   CATEGORIES.forEach(c=>{ const v=r[c.key]; if(v>0){ const w=c.weight||1; sum+=v*w; wsum+=w; } });
   return wsum?sum/wsum:null; }
@@ -741,12 +777,12 @@ function membersHTML(){
     ? `<div class="syncbox-p">Turn on sync first — member links carry the shared list.</div>`
     : !membersOpen
     ? `<div class="syncbtns"><button class="btn btn-add" data-act="members" style="min-height:44px">Show member links</button></div>`
-    : `<div class="memlist">${Object.keys(MEMBERS).map(s=>`<div class="memrow">
+    : `<div class="memlist">${Object.keys(VIEWERS).map(s=>`<div class="memrow">
           <div class="meminfo"><span class="memglyph">${esc(PEOPLE[s][0])}</span><span class="memname">${esc(PEOPLE[s])}</span></div>
           <div class="memacts"><a class="mini" href="${esc(memberLink(s))}">Open</a>
             <button class="mini" data-act="memcopy" data-link="${esc(memberLink(s))}" data-name="${esc(PEOPLE[s])}">Copy link</button></div>
         </div>`).join('')}</div>
-      <div class="datahint">Send each friend their link — that's their "account." Opening one yourself switches this phone to their view (use "Switch to full view" to come back).</div>
+      <div class="datahint">Send each friend their link — that's their "account." Tell them to Add to Home Screen <b>from their link</b> so their app opens in their view. Opening one yourself switches this phone (use "Switch to full view" to come back).</div>
       <div class="syncbtns" style="margin-top:10px"><button class="mini" data-act="members">Hide member links</button></div>`;
   return `<div class="syncbox">
     <div class="syncbox-h">🎟 Members</div>
@@ -844,7 +880,7 @@ function setWLService(id,val){ const w=(data.watchlist||[]).find(x=>x.id===id); 
 function setWLVibe(id){ const w=(data.watchlist||[]).find(x=>x.id===id); if(!w) return;
   const v=prompt('Vibe / tag (e.g. cozy, date night, mind-bender)', w.vibe||''); if(v===null) return; w.vibe=v.trim(); w.updated=now(); scheduleSave(); render(); }
 function watchToLibrary(id){ const w=(data.watchlist||[]).find(x=>x.id===id); if(!w) return;
-  data.watchlist=data.watchlist.filter(x=>x.id!==id); (data.deleted=data.deleted||[]).push(id); activeTab=(viewerMode&&MEMBERS[viewerMode]?viewerMode:'chad');
+  data.watchlist=data.watchlist.filter(x=>x.id!==id); (data.deleted=data.deleted||[]).push(id); activeTab=(viewerMode&&VIEWERS[viewerMode]?viewerMode:'chad');
   addMovie(w.title,'',{type:w.type,year:w.year,genre:w.genre,poster:w.poster,tmdbId:w.tmdbId}); }
 function wlTagList(){ const s=new Set(); (data.watchlist||[]).forEach(w=>{ if(w.genre) s.add(w.genre); if(w.vibe) s.add(w.vibe); }); return [...s].sort(); }
 function visibleWatch(){ let arr=(data.watchlist||[]).slice();
@@ -882,11 +918,77 @@ function watchCardHTML(w){
 }
 function listPanel(){
   const wl=data.watchlist||[];
-  const intro=`<div class="listintro"><div class="li-h">${viewerMode&&PEOPLE[viewerMode]?esc(PEOPLE[viewerMode])+"'s watch list":'Your watch list'}</div><div class="li-p">${viewerMode?'Your own queue — the Stewarts see it tagged with your name.':'Films &amp; shows you both want to get to.'} Tap ＋ to add, set where it's streaming and a vibe, then "Watched → rate" once you've seen it.</div></div>`;
+  const intro=`<div class="listintro"><div class="li-h">${viewerMode&&MEMBERS[viewerMode]?esc(PEOPLE[viewerMode])+"'s watch list":'Your watch list'}</div><div class="li-p">${viewerMode&&MEMBERS[viewerMode]?'Your own queue — the Stewarts see it tagged with your name.':'Films &amp; shows you both want to get to.'} Tap ＋ to add, set where it's streaming and a vibe, then "Watched → rate" once you've seen it.</div></div>`;
   if(!wl.length) return intro+`<div class="empty"><div class="big">Nothing on the list yet</div><div class="small">Add something you want<br>to watch together.</div></div>`+recsSectionHTML();
   const vis=visibleWatch();
   const body=vis.length?vis.map(watchCardHTML).join(''):`<div class="nomatch">Nothing matches these filters.</div>`;
   return intro+listControlsHTML()+`<div class="lib">${body}</div>`+recsSectionHTML();
+}
+
+/* ---------- board (forum) ---------- */
+function currentSlug(){ return (viewerMode&&VIEWERS[viewerMode])?viewerMode:'chad'; }
+function authorCls(a){ return a==='chad'?'c':a==='joelle'?'j':'a'; }
+function postTime(ts){ if(!ts) return ''; const d=new Date(ts);
+  return d.toLocaleDateString(undefined,{month:'short',day:'numeric'})+' · '+d.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'}); }
+function addPost(){
+  const t=(postDraft||'').trim(); if(!t){ toast('Write something first'); return; }
+  const p={id:'p'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),author:currentSlug(),
+    text:t,movieIds:[...postTags].filter(id=>getMovie(id)),created:Date.now(),updated:Date.now()};
+  data.posts.unshift(p); postDraft=''; postTags.clear(); scheduleSave(); render(); toast('Posted');
+}
+function delPost(id){
+  const p=(data.posts||[]).find(x=>x.id===id); if(!p) return;
+  if(!confirm('Delete this post?')) return;
+  data.posts=data.posts.filter(x=>x.id!==id); (data.deleted=data.deleted||[]).push(id); scheduleSave(); render();
+}
+function visiblePosts(){
+  let arr=(data.posts||[]).slice().sort((a,b)=>(b.created||0)-(a.created||0));
+  if(boardMovies.size||boardGeneral){
+    arr=arr.filter(p=>{ const ids=p.movieIds||[]; const hit=ids.some(id=>boardMovies.has(id));
+      return (boardMovies.size&&hit)||(boardGeneral&&!ids.length); });
+  }
+  const q=boardSearch.trim().toLowerCase();
+  if(q) arr=arr.filter(p=>{ const names=(p.movieIds||[]).map(id=>{const m=getMovie(id);return m?m.title:'';}).join(' ');
+    return (p.text+' '+(PEOPLE[p.author]||'')+' '+names).toLowerCase().includes(q); });
+  return arr;
+}
+function movieChipCloud(act,activeSet){
+  return data.movies.map(m=>`<button class="chip mini-chip ${activeSet.has(m.id)?'on':''}" data-${act}="${m.id}">${esc(m.title)}</button>`).join('');
+}
+function postsHTML(){
+  const me=currentSlug(), list=visiblePosts();
+  if(!list.length) return `<div class="nomatch">${(data.posts||[]).length?'No posts match these filters.':'No posts yet — start the conversation.'}</div>`;
+  return list.map(p=>{
+    const tags=(p.movieIds||[]).map(id=>{const m=getMovie(id);return m?`<span class="gchip">${esc(m.title)}</span>`:'';}).join('')
+      ||'<span class="gchip empty">general</span>';
+    const canDel=(!viewerMode)||p.author===me;
+    return `<div class="post"><div class="post-head">
+        <span class="qwho ${authorCls(p.author)}">${esc(PEOPLE[p.author]||'?')}</span>
+        <span class="post-time">${postTime(p.created)}</span>
+        ${canDel?`<button class="post-del" data-delpost="${p.id}">✕</button>`:''}</div>
+      <div class="post-text">${esc(p.text)}</div>
+      <div class="gtags" style="margin-top:8px">${tags}</div></div>`;
+  }).join('');
+}
+function boardPanel(){
+  const me=currentSlug();
+  const filtersOn=boardMovies.size||boardGeneral||boardSearch.trim();
+  const composer=`<div class="card bcomposer">
+    <div class="b-as">Posting as <b class="qwho ${authorCls(me)}">${esc(PEOPLE[me])}</b></div>
+    <textarea class="notes" id="postText" placeholder="Hot takes, watch-party plans, best-scene debates…">${esc(postDraft)}</textarea>
+    ${data.movies.length?`<div class="b-taglbl">Tag films (optional — untagged = general)</div>
+    <div class="chipcloud">${movieChipCloud('tagpick',postTags)}</div>`:''}
+    <button class="btn btn-add" id="postBtn" style="width:100%;min-height:46px;margin-top:11px">Post to the board</button></div>`;
+  const filters=`<div class="b-filters">
+    <div class="ctl-row"><input type="search" class="bsearch" id="boardSearch" placeholder="Search posts…" value="${esc(boardSearch)}" />
+      <button class="chip ${boardFiltersOpen?'on':''}" data-act="bfilters">Filter ▾</button>
+      ${filtersOn?`<button class="chip" data-act="bfclear">✕ Clear</button>`:''}</div>
+    ${boardFiltersOpen?`<div class="chipcloud" style="margin-top:9px">
+      <button class="chip mini-chip ${boardGeneral?'on':''}" data-act="bfgeneral">General</button>
+      ${movieChipCloud('bfm',boardMovies)}</div>`:''}</div>`;
+  return `<div class="listintro"><div class="li-h">The board</div>
+      <div class="li-p">Club chatter — reviews, debates, movie-night plans. Tag posts to films or leave them general, then filter or search to find a thread.</div></div>`
+    +composer+filters+`<div id="boardPosts">${postsHTML()}</div>`;
 }
 
 /* ---------- render ---------- */
@@ -897,7 +999,7 @@ function render(){
     <header class="app-head">
       <div class="eyebrow">The Stewart Screening Room</div>
       <h1 class="title">Movie&nbsp;Club</h1>
-      <div class="sub">${viewerMode&&PEOPLE[viewerMode]?`${esc(PEOPLE[viewerMode])} · guest curator`:`Chad <span style="color:var(--gold)">+</span> Joelle · rated out of five`}</div>
+      <div class="sub">${viewerMode==='joelle'?`Joelle · co-founder`:viewerMode&&PEOPLE[viewerMode]?`${esc(PEOPLE[viewerMode])} · guest curator`:`Chad's master view · rated out of five`}</div>
     </header>
     <div class="marquee">
       <div class="marquee-row">
@@ -924,19 +1026,20 @@ function render(){
     ${personTabList().map(p=>`<section class="panel ${activeTab===p?'active':''}">${personPanel(p)}</section>`).join('')}
     <section class="panel ${activeTab==='shared'?'active':''}">${sharedPanel()}</section>
     <section class="panel ${activeTab==='list'?'active':''}">${listPanel()}</section>
+    <section class="panel ${activeTab==='board'?'active':''}">${boardPanel()}</section>
     <div class="syncline">${source==='server'?'Synced for everyone':source==='local'?'Saved on this iPhone':'Preview · not yet synced'}</div>
     <div class="guideline"><a class="guidelink" href="/guide.html">❓ How to use Movie Club</a>${viewerMode?` <button class="guidelink" data-act="viewexit">Switch to full view</button>`:''}</div>
     <nav class="tabbar"><div class="tabbar-inner">${tabsHTML()}</div></nav>`;
   wire();
 }
-/* Members' tabs live only in their own views (?viewer=<slug> links) — the
-   couple's bar stays Chad/Joelle/Shared/List. Member ratings still surface on
-   Shared, and any member view is reachable by opening their link. */
-function personTabList(){ return viewerMode&&MEMBERS[viewerMode] ? [viewerMode] : ['chad','joelle']; }
+/* Everyone's view is their URL: no ?viewer = Chad's master view (his tab only);
+   ?viewer=<slug> = that person's view (Joelle included). Every view gets four
+   tabs: You · Shared · List · Board. */
+function personTabList(){ return viewerMode&&VIEWERS[viewerMode] ? [viewerMode] : ['chad']; }
 function tabsHTML(){
-  const defs = viewerMode&&MEMBERS[viewerMode]
-    ? [[viewerMode,esc(PEOPLE[viewerMode][0]),esc(firstName(PEOPLE[viewerMode])),1],['shared','★','Shared'],['list','✚','List']]
-    : [['chad','C','Chad'],['joelle','J','Joelle'],['shared','★','Shared'],['list','✚','List']];
+  const slug=viewerMode&&VIEWERS[viewerMode]?viewerMode:'chad';
+  const defs=[[slug,esc(PEOPLE[slug][0]),esc(firstName(PEOPLE[slug])),MEMBERS[slug]?1:0],
+    ['shared','★','Shared'],['list','✚','List'],['board','✎','Board']];
   return defs.map(d=>`<button class="tabbtn ${d[3]?'member ':''}${activeTab===d[0]?'active':''}" data-tab="${d[0]}"><span class="glyph">${d[1]}</span>${d[2]}</button>`).join('');
 }
 function movieSelectHTML(){
@@ -1161,7 +1264,7 @@ function importData(){
       const src = (j&&Array.isArray(j.movies)) ? j : (j&&j.data&&Array.isArray(j.data.movies) ? j.data : null);
       if(!src){ alert("That file doesn't look like a Movie Club backup."); return; }
       if(data.movies.length && !confirm(`Replace your current ${data.movies.length} film(s) with ${src.movies.length} from this backup? This overwrites what's here.`)) return;
-      data={movies:src.movies, watchlist:Array.isArray(src.watchlist)?src.watchlist:[]};
+      data={movies:src.movies, watchlist:Array.isArray(src.watchlist)?src.watchlist:[], posts:Array.isArray(src.posts)?src.posts:[], deleted:Array.isArray(src.deleted)?src.deleted:[]};
       normalize(); selectedId=data.movies[0]?data.movies[0].id:null; listView=true; scheduleSave(); render(); toast(`Imported ${src.movies.length} films`); };
     reader.readAsText(f); };
   inp.click();
@@ -1233,7 +1336,7 @@ function wire(){
     const m=getMovie(selectedId); if(!m) return; m.ratings[b.dataset.person][b.dataset.cat]=0; m.ratings[b.dataset.person].updated=now(); scheduleSave(); render(); }));
   root.querySelectorAll('textarea.notes').forEach(ta=>ta.addEventListener('input',()=>setNotes(selectedId,ta.dataset.person,ta.value)));
   root.querySelectorAll('[data-sort]').forEach(c=>c.addEventListener('click',()=>{sortMode=c.dataset.sort;render();}));
-  root.querySelectorAll('[data-act="rate"]').forEach(b=>b.addEventListener('click',()=>{selectedId=b.dataset.id;activeTab=(viewerMode&&MEMBERS[viewerMode]?viewerMode:'chad');listView=false;render();window.scrollTo({top:0,behavior:'smooth'});}));
+  root.querySelectorAll('[data-act="rate"]').forEach(b=>b.addEventListener('click',()=>{selectedId=b.dataset.id;activeTab=(viewerMode&&VIEWERS[viewerMode]?viewerMode:'chad');listView=false;render();window.scrollTo({top:0,behavior:'smooth'});}));
   root.querySelectorAll('[data-act="open"]').forEach(b=>b.addEventListener('click',()=>openEdit(b.dataset.id)));
   root.querySelectorAll('[data-act="fav"]').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();toggleFav(b.dataset.id);}));
   root.querySelectorAll('[data-act="closeedit"]').forEach(b=>b.addEventListener('click',closeEdit));
@@ -1263,6 +1366,22 @@ function wire(){
   root.querySelectorAll('[data-act="mergein"]').forEach(b=>b.addEventListener('click',()=>mergeFrom(prompt("Paste the OTHER phone's code or invite link to pull its movies into this list:"))));
   root.querySelectorAll('[data-act="recreate"]').forEach(b=>b.addEventListener('click',recreateStore));
   root.querySelectorAll('[data-act="members"]').forEach(b=>b.addEventListener('click',()=>{membersOpen=!membersOpen;render();}));
+  const pt=document.getElementById('postText');
+  if(pt) pt.addEventListener('input',()=>{ postDraft=pt.value; });
+  const pb=document.getElementById('postBtn');
+  if(pb) pb.addEventListener('click',addPost);
+  root.querySelectorAll('[data-tagpick]').forEach(b=>b.addEventListener('click',()=>{
+    const id=b.dataset.tagpick; postTags.has(id)?postTags.delete(id):postTags.add(id); b.classList.toggle('on'); }));
+  const bs=document.getElementById('boardSearch');
+  if(bs) bs.addEventListener('input',()=>{ boardSearch=bs.value;
+    const bp=document.getElementById('boardPosts'); if(bp) bp.innerHTML=postsHTML(); });
+  root.querySelectorAll('[data-act="bfilters"]').forEach(b=>b.addEventListener('click',()=>{boardFiltersOpen=!boardFiltersOpen;render();}));
+  root.querySelectorAll('[data-act="bfgeneral"]').forEach(b=>b.addEventListener('click',()=>{boardGeneral=!boardGeneral;render();}));
+  root.querySelectorAll('[data-bfm]').forEach(b=>b.addEventListener('click',()=>{
+    const id=b.dataset.bfm; boardMovies.has(id)?boardMovies.delete(id):boardMovies.add(id); render(); }));
+  root.querySelectorAll('[data-act="bfclear"]').forEach(b=>b.addEventListener('click',()=>{boardMovies.clear();boardGeneral=false;boardSearch='';render();}));
+  const bpst=document.getElementById('boardPosts');
+  if(bpst) bpst.addEventListener('click',e=>{ const b=e.target.closest?e.target.closest('[data-delpost]'):null; if(b) delPost(b.dataset.delpost); });
   root.querySelectorAll('[data-act="memcopy"]').forEach(b=>b.addEventListener('click',()=>copyLink(b.dataset.link,`${b.dataset.name}'s link copied — send it over`)));
   root.querySelectorAll('[data-act="viewexit"]').forEach(b=>b.addEventListener('click',()=>{
     viewerMode=''; try{ localStorage.removeItem(VKEY); }catch(e){} activeTab='chad'; render(); }));
@@ -1285,11 +1404,11 @@ document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==
     if(incoming && incoming!==syncBox){
       if(!syncBox || confirm('Open the shared movie list on this phone?')) saveSyncBox(incoming);
     }
-    if(vp&&MEMBERS[vp]){ viewerMode=vp; try{ localStorage.setItem(VKEY,vp); }catch(e){} }
-    if(incoming||vp){ u.searchParams.delete('sync'); u.searchParams.delete('viewer');
-      history.replaceState(null,'',u.pathname+(u.search||'')+u.hash); }
+    if(vp&&VIEWERS[vp]){ viewerMode=vp; try{ localStorage.setItem(VKEY,vp); }catch(e){} }
+    if(incoming){ u.searchParams.delete('sync');           // keep ?viewer in the URL so
+      history.replaceState(null,'',u.pathname+(u.search||'')+u.hash); } // Add-to-Home-Screen keeps their view
   }catch(e){}
-  if(viewerMode && !MEMBERS[viewerMode]){ viewerMode=''; try{ localStorage.removeItem(VKEY); }catch(e){} }
+  if(viewerMode && !VIEWERS[viewerMode]){ viewerMode=''; try{ localStorage.removeItem(VKEY); }catch(e){} }
   activeTab = viewerMode ? viewerMode : 'chad';
   await loadData(); if(data.movies.length) selectedId=data.movies[0].id; render();
   if(syncBox) scheduleSave();                 // push any local-only items merged in at boot
