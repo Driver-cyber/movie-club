@@ -271,6 +271,8 @@
   .guidelink{font-family:var(--mono);font-size:10px;letter-spacing:0.1em;color:var(--bone-dim);
     text-decoration:none;border:1px solid var(--line);border-radius:20px;padding:8px 15px;display:inline-block}
   .guidelink:active{color:var(--bone)}
+  .verline{text-align:center;margin-top:12px;font-family:var(--mono);font-size:9px;
+    letter-spacing:0.18em;text-transform:uppercase;color:var(--bone-faint);opacity:0.7}
 
   /* sort / filter controls */
   .controls{margin-bottom:14px;display:flex;flex-direction:column;gap:9px}
@@ -483,6 +485,7 @@ const LKEY='movieclub:data';
    device uses it automatically; no join/turn-on flow needed. */
 const DEFAULT_BOX='019f10d7-469f-7e40-972f-962f73fb3a70';
 const SCHEMA_VERSION=1;   // bump when the data shape changes; import normalizes forward
+const APP_VERSION='v30';  // shown in the footer — keep in step with the sw.js cache name
 const CATEGORIES=[
   {key:'plot',               label:'Plot',               desc:'story · structure'},
   {key:'writing',            label:'Writing',            desc:'script · dialogue'},
@@ -1031,6 +1034,7 @@ function render(){
     <section class="panel ${activeTab==='board'?'active':''}">${boardPanel()}</section>
     <div class="syncline">${source==='server'?'Synced for everyone':source==='local'?'Saved on this phone':'Preview · not yet synced'}</div>
     <div class="guideline"><a class="guidelink" href="/guide.html">❓ How to use Movie Club</a>${viewerMode?` <button class="guidelink" data-act="viewexit">Switch to full view</button>`:''}</div>
+    <div class="verline">Movie Club ${APP_VERSION}</div>
     <nav class="tabbar"><div class="tabbar-inner">${tabsHTML()}</div></nav>`;
   wire();
 }
