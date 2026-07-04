@@ -351,6 +351,32 @@
   .post-text{font-family:var(--serif);font-size:15.5px;line-height:1.55;color:var(--bone);margin-top:8px;white-space:pre-wrap;word-break:break-word}
   .qwho.c{color:var(--rust)} .qwho.j{color:var(--gold)} .qwho.a{color:var(--sage)}
 
+  /* rated-by row + read-only scorecard peek */
+  .raterrow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:11px;padding:10px;
+    background:var(--ink);border:1px solid var(--line);border-radius:11px}
+  .rr-lbl{font-family:var(--mono);font-size:8.5px;letter-spacing:0.14em;text-transform:uppercase;color:var(--bone-faint);margin-right:3px}
+  .raterchip{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--bone);background:var(--ink-3);
+    border:1px solid var(--line-strong);border-radius:16px;padding:7px 11px;cursor:pointer;min-height:34px}
+  .raterchip .qwho{font-size:10px;letter-spacing:0.08em;text-transform:uppercase}
+  .raterchip:active{transform:translateY(1px)}
+  #rview{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;padding:18px}
+  #rview.show{display:flex}
+  .rv-box{position:relative;z-index:1;width:100%;max-width:420px;max-height:82dvh;overflow-y:auto;-webkit-overflow-scrolling:touch;
+    background:linear-gradient(180deg,var(--ink-2),var(--ink));border:1px solid var(--line-strong);border-radius:16px;padding:18px;margin-top:40px}
+  .rv-head{display:flex;gap:12px;align-items:flex-start;margin-bottom:13px}
+  .rv-poster{width:46px;height:69px;border-radius:7px;object-fit:cover;flex-shrink:0;border:1px solid var(--line)}
+  .rv-title{font-family:var(--serif);font-style:italic;font-weight:500;font-size:20px;line-height:1.1}
+  .rv-sub{font-family:var(--mono);font-size:10px;color:var(--bone-dim);margin-top:6px;letter-spacing:0.04em;line-height:1.6}
+  .rv-sub .qwho{font-weight:600;letter-spacing:0.1em;text-transform:uppercase}
+  .rv-rows{border-top:1px solid var(--line)}
+  .rv-row{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
+  .rv-row span{font-family:var(--serif);font-size:14.5px;color:var(--bone-dim)}
+  .rv-row b{font-family:var(--mono);font-size:11px;color:var(--gold);white-space:nowrap}
+  .rv-row b.dim{color:var(--bone-faint);font-weight:400}
+  .rv-notes{margin-top:13px;background:var(--ink);border:1px solid var(--line);border-radius:10px;padding:11px 12px;
+    font-family:var(--serif);font-size:14.5px;line-height:1.5;color:var(--bone)}
+  .rv-nlbl{font-family:var(--mono);font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--bone-dim);margin-bottom:6px}
+
   /* recommendations */
   .recsbar{margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
   .recs-h{font-family:var(--mono);font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--bone-dim);margin-bottom:11px;display:flex;align-items:center;gap:8px}
@@ -439,6 +465,7 @@
 <div id="toast"></div>
 <div id="trailer"></div>
 <div id="guidepop"></div>
+<div id="rview"></div>
 
 <script>
 /* ================= Movie Club — Chad & Joelle =================
@@ -495,6 +522,7 @@ let selectedId=null, activeTab='chad', sortMode='recent', newFormOpen=false;
 let genreFilter='all', typeFilter='all', listView=true, membersOpen=false;
 let wlService='all', wlTag='all';
 let postDraft='', postTags=new Set(), boardSearch='', boardMovies=new Set(), boardGeneral=false, boardFiltersOpen=false;
+let raterOpenId='';   // shared row whose "rated by" list is expanded
 let saveTimer=null, source='memory', syncBox=DEFAULT_BOX, cloudErr='', viewerMode='';
 let suggTimer=null, suggList=[], pendingPick=null, pendingCover=null, pendingType='movie';
 const MAX_FAV=8;
@@ -651,9 +679,11 @@ function avgOf(r){ if(!r) return null; let sum=0,wsum=0;
   return wsum?sum/wsum:null; }
 function personAvg(m,p){ return avgOf(m.ratings[p]); }
 function firstName(n){ return (n||'').trim().split(/\s+/)[0]||''; }
-function combinedAvg(m){ const vals=COUPLE.map(p=>personAvg(m,p));
-  if(m.includeGuests) Object.keys(MEMBERS).forEach(s=>vals.push(personAvg(m,s)));
-  const a=vals.filter(x=>x!==null); return a.length?a.reduce((x,y)=>x+y,0)/a.length:null; }
+function combinedAvg(m){ const a=COUPLE.map(p=>personAvg(m,p)).filter(x=>x!==null);
+  return a.length?a.reduce((x,y)=>x+y,0)/a.length:null; }
+function allAvg(m){ const a=Object.keys(PEOPLE).map(p=>personAvg(m,p)).filter(x=>x!==null);
+  return a.length?a.reduce((x,y)=>x+y,0)/a.length:null; }
+function raters(m){ return Object.keys(PEOPLE).filter(p=>personAvg(m,p)!==null); }
 function fmt(n){ return n===null?'—':(Math.round(n*10)/10).toFixed(1); }
 function esc(s){ return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
@@ -717,7 +747,6 @@ function renameMovie(id){ const m=getMovie(id); if(!m) return;
 function editGenre(id){ const m=getMovie(id); if(!m) return;
   const n=prompt('Genre (e.g. Drama, Sci-Fi, Comedy)', m.genre||''); if(n===null) return;
   m.genre=n.trim(); m.updated=now(); scheduleSave(); render(); }
-function toggleVerdict(id){ const m=getMovie(id); if(!m) return; m.includeGuests=!m.includeGuests; m.updated=now(); scheduleSave(); render(); }
 
 /* ---------- members (everyone has their own link) ---------- */
 function memberLink(slug){
@@ -874,6 +903,29 @@ function listPanel(){
   const body=vis.length?vis.map(watchCardHTML).join(''):`<div class="nomatch">Nothing matches these filters.</div>`;
   return intro+listControlsHTML()+`<div class="lib">${body}</div>`+recsSectionHTML();
 }
+
+/* ---------- read-only scorecard peek (tap a rater's name) ---------- */
+function openRatingView(mid,p){
+  const m=getMovie(mid); if(!m||!PEOPLE[p]) return;
+  const r=m.ratings[p]||blankPerson(); const avg=personAvg(m,p);
+  const rows=CATEGORIES.map(c=>{ const v=r[c.key]||0;
+    if(c.type==='slider') return `<div class="rv-row"><span>${c.label}</span><b class="${v?'':'dim'}">${v?PRED_WORDS[v]:'—'}</b></div>`;
+    return `<div class="rv-row"><span>${c.label}</span><b class="${v?'':'dim'}">${v?'★ '+v+' / 5':'—'}</b></div>`; }).join('');
+  const rec=r.recommend===true?' · 👍 recommends':r.recommend===false?" · 👎 wouldn't recommend":'';
+  const el=document.getElementById('rview'); if(!el) return;
+  el.innerHTML=`<div class="tr-back" data-act="rvclose"></div>
+    <div class="rv-box"><button class="tr-x" data-act="rvclose">✕</button>
+      <div class="rv-head">${m.poster?`<img class="rv-poster" src="${esc(m.poster)}" alt="" />`:''}
+        <div><div class="rv-title">${esc(m.title)}</div>
+        <div class="rv-sub"><span class="qwho ${authorCls(p)}">${esc(PEOPLE[p])}</span>${avg!==null?` · avg ${fmt(avg)}/5`:' · not rated yet'}${rec}</div></div></div>
+      <div class="rv-rows">${rows}</div>
+      ${(r.notes||'').trim()?`<div class="rv-notes"><div class="rv-nlbl">${esc(firstName(PEOPLE[p]))}'s notes</div>${esc(r.notes)}</div>`:''}
+    </div>`;
+  el.classList.add('show'); lockScroll();
+  el.querySelectorAll('[data-act="rvclose"]').forEach(b=>b.addEventListener('click',closeRatingView));
+}
+function closeRatingView(){ const el=document.getElementById('rview'); if(!el) return;
+  el.classList.remove('show'); el.innerHTML=''; unlockScroll(); }
 
 /* ---------- board (forum) ---------- */
 function currentSlug(){ return (viewerMode&&VIEWERS[viewerMode])?viewerMode:'chad'; }
@@ -1042,7 +1094,7 @@ function summaryCardHTML(m,p){
       <div class="libstatus">${status}${recIco}</div></div>
     <div class="libright">
       <div class="libnum ${cv===null?'empty':''}">${fmt(cv)}</div>
-      <div class="libnlbl">${m.includeGuests?'everyone':'verdict'}</div>
+      <div class="libnlbl">verdict</div>
       <span class="heart ${m.fav?'on':''}" data-act="fav" data-id="${m.id}" role="button" tabindex="0" aria-label="Top ${MAX_FAV}">${m.fav?'♥':'♡'}</span>
     </div></button>`;
 }
@@ -1083,7 +1135,7 @@ function sharedPanel(){
     <div class="stat"><div class="k">Films logged</div><div class="v">${data.movies.length}</div></div>
     <div class="stat"><div class="k">Top verdict</div><div class="v">${top?esc(top.title):'—'}${top?` <small>${fmt(combinedAvg(top))}</small>`:''}</div></div>
     ${split?`<div class="stat"><div class="k">Biggest split</div><div class="v">${esc(split.title)} <small>Δ${fmt(gap)}</small></div></div>`:''}</div>`;
-  const rows=visibleMovies().map(m=>{ const c=personAvg(m,'chad'),j=personAvg(m,'joelle'),cv=combinedAvg(m);
+  const rows=visibleMovies().map(m=>{ const c=personAvg(m,'chad'),j=personAvg(m,'joelle'),cv=combinedAvg(m),rl=raters(m),av=allAvg(m);
     const cn=m.ratings.chad.notes.trim(),jn=m.ratings.joelle.notes.trim();
     const cp=m.ratings.chad.predictability,jp=m.ratings.joelle.predictability;
     const ratedMembers=Object.keys(MEMBERS).filter(s=>personAvg(m,s)!==null);
@@ -1101,7 +1153,8 @@ function sharedPanel(){
     const notes=noteItems.length?`<div class="twonotes">${noteItems.map(it=>`<div class="qnote"><div class="qwho ${it.cls}">${esc(it.who)}</div><div class="qtext">${esc(it.text)}</div></div>`).join('')}</div>`:'';
     return `<div class="filmrow"><div class="filmrow-head">${m.poster?posterHTML(m,'frposter',''):''}
       <div class="frmain"><div class="ftitle">${m.fav?'<span class="favmark">♥</span> ':''}${esc(m.title)}</div>${(m.year||m.watched)?`<div class="fdate">${m.year?esc(m.year):''}${m.year&&m.watched?' · ':''}${m.watched?`watched ${esc(m.watched)}`:''}</div>`:''}<div class="gtags">${typeBadge(m)}${m.genre?`<span class="gchip">${esc(m.genre)}</span>`:''}</div></div>
-      <div class="verdict"><div class="vnum ${cv===null?'empty':''}">${fmt(cv)}</div><div class="vlbl">${m.includeGuests?"Everyone's verdict":'Shared verdict'}</div>${ratedMembers.length?`<button class="vtoggle ${m.includeGuests?'on':''}" data-act="vtoggle" data-id="${m.id}">${m.includeGuests?'✓ incl. everyone':'＋ include everyone'}</button>`:''}</div></div>
+      <div class="verdict"><div class="vnum ${cv===null?'empty':''}">${fmt(cv)}</div><div class="vlbl">Shared verdict</div>${rl.length?`<button class="vtoggle ${raterOpenId===m.id?'on':''}" data-act="raters" data-id="${m.id}">All ${fmt(av)} · ${rl.length} rater${rl.length>1?'s':''} ${raterOpenId===m.id?'▴':'▾'}</button>`:''}</div></div>
+      ${raterOpenId===m.id?`<div class="raterrow"><span class="rr-lbl">Rated by</span>${rl.map(p=>`<button class="raterchip" data-act="rview" data-id="${m.id}" data-person="${p}"><span class="qwho ${authorCls(p)}">${esc(firstName(PEOPLE[p]))}</span> ${fmt(personAvg(m,p))}</button>`).join('')}</div>`:''}
       <div class="scorebars">
         <div class="pscore"><span class="who">Chad</span><span class="meter"><span class="chad" style="width:${c?(c/5*100):0}%"></span></span><span class="pnum ${c===null?'none':''}">${fmt(c)}</span></div>
         <div class="pscore"><span class="who">Joelle</span><span class="meter"><span class="joelle" style="width:${j?(j/5*100):0}%"></span></span><span class="pnum ${j===null?'none':''}">${fmt(j)}</span></div>
@@ -1311,7 +1364,8 @@ function wire(){
   root.querySelectorAll('[data-act="memcopy"]').forEach(b=>b.addEventListener('click',()=>copyLink(b.dataset.link,`${b.dataset.name}'s link copied — send it over`)));
   root.querySelectorAll('[data-act="viewexit"]').forEach(b=>b.addEventListener('click',()=>{
     viewerMode=''; try{ localStorage.removeItem(VKEY); }catch(e){} activeTab='chad'; render(); }));
-  root.querySelectorAll('[data-act="vtoggle"]').forEach(b=>b.addEventListener('click',()=>toggleVerdict(b.dataset.id)));
+  root.querySelectorAll('[data-act="raters"]').forEach(b=>b.addEventListener('click',()=>{raterOpenId=(raterOpenId===b.dataset.id)?'':b.dataset.id;render();}));
+  root.querySelectorAll('[data-act="rview"]').forEach(b=>b.addEventListener('click',()=>openRatingView(b.dataset.id,b.dataset.person)));
   root.querySelectorAll('[data-act="delete"]').forEach(b=>b.addEventListener('click',()=>deleteMovie(b.dataset.id)));
 }
 
