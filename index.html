@@ -532,7 +532,7 @@ async function saveData(){
       const ae=document.activeElement;            // don't yank focus while editing
       if(changed && !(ae&&/INPUT|TEXTAREA|SELECT/.test(ae.tagName))) render();
       return; }
-    source='local'; toast('Saved on this iPhone');
+    source='local'; toast('Saved on this phone');
   }catch(e){ source='local'; toast('Saved offline'); }
 }
 async function manualPull(){
@@ -977,7 +977,7 @@ function render(){
     <section class="panel ${activeTab==='shared'?'active':''}">${sharedPanel()}</section>
     <section class="panel ${activeTab==='list'?'active':''}">${listPanel()}</section>
     <section class="panel ${activeTab==='board'?'active':''}">${boardPanel()}</section>
-    <div class="syncline">${source==='server'?'Synced for everyone':source==='local'?'Saved on this iPhone':'Preview · not yet synced'}</div>
+    <div class="syncline">${source==='server'?'Synced for everyone':source==='local'?'Saved on this phone':'Preview · not yet synced'}</div>
     <div class="guideline"><a class="guidelink" href="/guide.html">❓ How to use Movie Club</a>${viewerMode?` <button class="guidelink" data-act="viewexit">Switch to full view</button>`:''}</div>
     <nav class="tabbar"><div class="tabbar-inner">${tabsHTML()}</div></nav>`;
   wire();
