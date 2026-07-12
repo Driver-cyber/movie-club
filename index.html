@@ -509,7 +509,7 @@ const LKEY='movieclub:data';
    device uses it automatically; no join/turn-on flow needed. */
 const DEFAULT_BOX='019f10d7-469f-7e40-972f-962f73fb3a70';
 const SCHEMA_VERSION=1;   // bump when the data shape changes; import normalizes forward
-const APP_VERSION='v32';  // shown in the footer — keep in step with the sw.js cache name
+const APP_VERSION='v33';  // shown in the footer — keep in step with the sw.js cache name
 const CATEGORIES=[
   {key:'plot',               label:'Plot',               desc:'story · structure'},
   {key:'writing',            label:'Writing',            desc:'script · dialogue'},
@@ -1248,7 +1248,8 @@ function runBrowseSearch(q){
 function summaryCardHTML(m,p){
   const cv=combinedAvg(m), mine=personAvg(m,p), rec=m.ratings[p].recommend;
   const metaBits=[m.year&&esc(m.year), m.watched&&('seen '+esc(m.watched))].filter(Boolean).join(' · ');
-  const status=mine!==null?`<span class="mine">You ${fmt(mine)}</span>`:`<span class="tbr">TBR · to rate</span>`;
+  const status=(mine===null?`<span class="tbr">TBR · to rate</span>`:'')
+    +(cv!==null?`<span class="mine">Verdict ${fmt(cv)}</span>`:'');
   const recIco=rec===true?'<span class="recyes">👍</span>':rec===false?'<span class="recno">👎</span>':'';
   return `<button class="libcard" data-act="open" data-id="${m.id}">
     ${posterHTML(m,'libposter','🎬')}
@@ -1257,8 +1258,8 @@ function summaryCardHTML(m,p){
       <div class="gtags">${typeBadge(m)}${m.genre?`<span class="gchip">${esc(m.genre)}</span>`:''}</div>
       <div class="libstatus">${status}${recIco}</div></div>
     <div class="libright">
-      <div class="libnum ${cv===null?'empty':''}">${fmt(cv)}</div>
-      <div class="libnlbl">verdict</div>
+      <div class="libnum ${mine===null?'empty':''}">${fmt(mine)}</div>
+      <div class="libnlbl">you</div>
       <span class="heart ${m.fav?'on':''}" data-act="fav" data-id="${m.id}" role="button" tabindex="0" aria-label="Top ${MAX_FAV}">${m.fav?'♥':'♡'}</span>
     </div></button>`;
 }
