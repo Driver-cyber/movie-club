@@ -444,9 +444,33 @@
   .tabbtn.member.active::before{background:var(--sage)}
   .tabbtn.member.active .glyph{border-color:var(--sage);color:var(--sage);background:rgba(122,154,90,0.12)}
   .tabbtn.member.active{color:var(--bone)}
-  .tabbtn[data-tab="board"].active::before{background:var(--gold)}
-  .tabbtn[data-tab="board"].active .glyph{border-color:var(--gold);color:var(--gold);background:rgba(224,178,92,0.12)}
-  .tabbtn[data-tab="board"].active{color:var(--bone)}
+  .tabbtn.morebtn.active::before{background:var(--gold)}
+  .tabbtn.morebtn.active .glyph{border-color:var(--gold);color:var(--gold);background:rgba(224,178,92,0.12)}
+  .tabbtn.morebtn.active{color:var(--bone)}
+
+  /* radial More fan */
+  #fan{position:fixed;inset:0;z-index:25;pointer-events:none}
+  #fan .fan-back{position:absolute;inset:0;background:rgba(12,9,7,0.62);
+    -webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);opacity:0;transition:opacity .25s;pointer-events:none}
+  #fan.show .fan-back{opacity:1;pointer-events:auto}
+  .fan-items{position:absolute;right:30px;bottom:calc(var(--bar-h) + var(--safe-bottom) + 14px)}
+  .fan-item{position:absolute;right:0;bottom:0;width:62px;height:62px;border-radius:50%;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
+    background:linear-gradient(180deg,var(--ink-3),var(--ink-2));border:1px solid var(--gold-dim);
+    color:var(--bone);cursor:pointer;opacity:0;pointer-events:none;
+    transform:translate(0,0) scale(.3);
+    transition:transform .32s cubic-bezier(.2,.9,.3,1.25),opacity .18s;transition-delay:var(--d);
+    box-shadow:0 14px 34px -14px rgba(0,0,0,.9)}
+  .fan-item .fi-g{font-size:17px;line-height:1}
+  .fan-item span:last-child{font-family:var(--mono);font-size:7.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--bone-dim)}
+  #fan.show .fan-item{transform:translate(var(--fx),var(--fy)) scale(1);opacity:1;pointer-events:auto}
+  .fan-item.cur{border-color:var(--gold)}
+  .fan-item.cur span:last-child{color:var(--gold)}
+  .fan-item:active{transform:translate(var(--fx),var(--fy)) scale(.92)}
+
+  .tbrhint{margin-top:12px;text-align:center;font-family:var(--mono);font-size:10.5px;letter-spacing:0.08em;
+    color:var(--rust);background:rgba(194,94,56,0.08);border:1px dashed var(--rust-soft);border-radius:11px;
+    padding:12px;cursor:pointer}
   .tabbtn .glyph{font-size:14px}
   .tabbtn:focus-visible{outline:2px solid var(--rust);outline-offset:-4px}
 
@@ -485,7 +509,7 @@ const LKEY='movieclub:data';
    device uses it automatically; no join/turn-on flow needed. */
 const DEFAULT_BOX='019f10d7-469f-7e40-972f-962f73fb3a70';
 const SCHEMA_VERSION=1;   // bump when the data shape changes; import normalizes forward
-const APP_VERSION='v30';  // shown in the footer — keep in step with the sw.js cache name
+const APP_VERSION='v31';  // shown in the footer — keep in step with the sw.js cache name
 const CATEGORIES=[
   {key:'plot',               label:'Plot',               desc:'story · structure'},
   {key:'writing',            label:'Writing',            desc:'script · dialogue'},
@@ -526,6 +550,8 @@ let genreFilter='all', typeFilter='all', listView=true, membersOpen=false;
 let wlService='all', wlTag='all';
 let postDraft='', postTags=new Set(), boardSearch='', boardMovies=new Set(), boardGeneral=false, boardFiltersOpen=false;
 let raterOpenId='';   // shared row whose "rated by" list is expanded
+let moreOpen=false;   // radial More menu
+let browseQ='', browseResults=null, browseTimer=null;   // Browse screen (null=idle,'loading',array)
 let saveTimer=null, source='memory', syncBox=DEFAULT_BOX, cloudErr='', viewerMode='';
 let suggTimer=null, suggList=[], pendingPick=null, pendingCover=null, pendingType='movie';
 const MAX_FAV=8;
@@ -701,7 +727,7 @@ function toggleFav(id){ const m=getMovie(id); if(!m) return;
 function favCount(){ return data.movies.filter(m=>m.fav).length; }
 function setRecommend(id,p,val){ const m=getMovie(id); if(!m) return;
   m.ratings[p].recommend=(m.ratings[p].recommend===val)?null:val; m.ratings[p].updated=now(); scheduleSave(); render(); }
-function openEdit(id){ selectedId=id; listView=false; render(); window.scrollTo({top:0,behavior:'smooth'}); }
+function openEdit(id){ selectedId=id; listView=false; activeTab=(viewerMode&&VIEWERS[viewerMode])?viewerMode:'chad'; render(); window.scrollTo({top:0,behavior:'smooth'}); }
 function closeEdit(){ clearTimeout(saveTimer); saveData(); listView=true; render(); window.scrollTo({top:0,behavior:'smooth'}); }
 
 /* ---------- sort + filter (shared by libraries) ---------- */
@@ -777,7 +803,8 @@ function setNotes(id,p,text){ const m=getMovie(id); if(!m) return; m.ratings[p].
 
 /* ---------- trailers (in-app YouTube) ---------- */
 let scrollLockY=0;
-function lockScroll(){ scrollLockY=window.scrollY||window.pageYOffset||0;
+function lockScroll(){ if(document.body.style.position==='fixed') return;   // already locked
+  scrollLockY=window.scrollY||window.pageYOffset||0;
   const b=document.body.style; b.position='fixed'; b.top=`-${scrollLockY}px`; b.left='0'; b.right='0'; b.width='100%'; }
 function unlockScroll(){ const b=document.body.style; b.position=''; b.top=''; b.left=''; b.right=''; b.width=''; window.scrollTo(0,scrollLockY); }
 function trailerBtn(o,cls){ return `<button class="${cls||'mini'}" data-act="trailer" data-tmdb="${o.tmdbId||0}" data-ttype="${o.type||'movie'}" data-title="${esc(o.title)}">▶ Trailer</button>`; }
@@ -1006,7 +1033,23 @@ function render(){
       <h1 class="title">Movie&nbsp;Club</h1>
       <div class="sub">${viewerMode==='joelle'?`Joelle · co-founder`:viewerMode&&PEOPLE[viewerMode]?`${esc(PEOPLE[viewerMode])} · guest curator`:`Chad's master view · rated out of five`}</div>
     </header>
-    <div class="marquee">
+    ${marqueeHTML()}
+    ${personTabList().map(p=>`<section class="panel ${activeTab===p?'active':''}">${personPanel(p)}</section>`).join('')}
+    <section class="panel ${activeTab==='shared'?'active':''}">${sharedPanel()}</section>
+    <section class="panel ${activeTab==='list'?'active':''}">${listPanel()}</section>
+    <section class="panel ${activeTab==='board'?'active':''}">${boardPanel()}</section>
+    <section class="panel ${activeTab==='tbr'?'active':''}">${tbrPanel()}</section>
+    <section class="panel ${activeTab==='browse'?'active':''}">${browsePanel()}</section>
+    <div class="syncline">${source==='server'?'Synced for everyone':source==='local'?'Saved on this phone':'Preview · not yet synced'}</div>
+    <div class="guideline"><a class="guidelink" href="/guide.html">❓ How to use Movie Club</a>${viewerMode?` <button class="guidelink" data-act="viewexit">Switch to full view</button>`:''}</div>
+    <div class="verline">Movie Club ${APP_VERSION}</div>
+    ${fanHTML()}
+    <nav class="tabbar"><div class="tabbar-inner">${tabsHTML()}</div></nav>`;
+  wire();
+}
+function marqueeHTML(){
+  if(activeTab==='browse'||activeTab==='tbr') return '';   // Browse has its own search; TBR is read-and-rate
+  return `<div class="marquee">
       <div class="marquee-row">
         <button class="btn btn-add" id="toggleNew" style="flex:1;min-height:50px">${newFormOpen?'Close':(activeTab==='list'?'＋  Add to your list':'＋  Add a film or show')}</button>
       </div>
@@ -1027,26 +1070,31 @@ function render(){
         ${activeTab==='list'?'':`<div class="field"><label>Watched on (optional)</label><input id="newDate" type="date" /></div>`}
         <button class="btn btn-add" id="saveNew" style="min-height:50px">${activeTab==='list'?'Add to list':'Add to library'}</button>
       </div>
-    </div>
-    ${personTabList().map(p=>`<section class="panel ${activeTab===p?'active':''}">${personPanel(p)}</section>`).join('')}
-    <section class="panel ${activeTab==='shared'?'active':''}">${sharedPanel()}</section>
-    <section class="panel ${activeTab==='list'?'active':''}">${listPanel()}</section>
-    <section class="panel ${activeTab==='board'?'active':''}">${boardPanel()}</section>
-    <div class="syncline">${source==='server'?'Synced for everyone':source==='local'?'Saved on this phone':'Preview · not yet synced'}</div>
-    <div class="guideline"><a class="guidelink" href="/guide.html">❓ How to use Movie Club</a>${viewerMode?` <button class="guidelink" data-act="viewexit">Switch to full view</button>`:''}</div>
-    <div class="verline">Movie Club ${APP_VERSION}</div>
-    <nav class="tabbar"><div class="tabbar-inner">${tabsHTML()}</div></nav>`;
-  wire();
+    </div>`;
 }
 /* Everyone's view is their URL: no ?viewer = Chad's master view (his tab only);
-   ?viewer=<slug> = that person's view (Joelle included). Every view gets four
-   tabs: You · Shared · List · Board. */
+   ?viewer=<slug> = that person's view (Joelle included). Three tabs everywhere
+   (You · Shared · ✦ More) — More fans out List / Board / TBR / Browse. */
+const MORE_SCREENS={list:'List',board:'Board',tbr:'TBR',browse:'Browse'};
 function personTabList(){ return viewerMode&&VIEWERS[viewerMode] ? [viewerMode] : ['chad']; }
 function tabsHTML(){
   const slug=viewerMode&&VIEWERS[viewerMode]?viewerMode:'chad';
   const defs=[[slug,esc(PEOPLE[slug][0]),esc(firstName(PEOPLE[slug])),MEMBERS[slug]?1:0],
-    ['shared','★','Shared'],['list','✚','List'],['board','✎','Board']];
-  return defs.map(d=>`<button class="tabbtn ${d[3]?'member ':''}${activeTab===d[0]?'active':''}" data-tab="${d[0]}"><span class="glyph">${d[1]}</span>${d[2]}</button>`).join('');
+    ['shared','★','Shared']];
+  const tabs=defs.map(d=>`<button class="tabbtn ${d[3]?'member ':''}${activeTab===d[0]?'active':''}" data-tab="${d[0]}"><span class="glyph">${d[1]}</span>${d[2]}</button>`).join('');
+  const moreActive=!!MORE_SCREENS[activeTab];
+  return tabs+`<button class="tabbtn morebtn ${moreActive?'active':''}" data-more><span class="glyph">✦</span>${moreActive?MORE_SCREENS[activeTab]:'More'}</button>`;
+}
+function fanHTML(){
+  // quarter-arc fan anchored above the More button (bottom right)
+  const items=[
+    ['list','✚','List',0,-118,'0ms'],
+    ['board','✎','Board',-55,-104,'40ms'],
+    ['tbr','⏳','TBR',-98,-66,'80ms'],
+    ['browse','🔎','Browse',-117,-12,'120ms'],
+  ];
+  return `<div id="fan" class="${moreOpen?'show':''}"><div class="fan-back" data-fanclose></div>
+    <div class="fan-items">${items.map(i=>`<button class="fan-item ${activeTab===i[0]?'cur':''}" data-tab="${i[0]}" style="--fx:${i[3]}px;--fy:${i[4]}px;--d:${i[5]}"><span class="fi-g">${i[1]}</span><span>${i[2]}</span></button>`).join('')}</div></div>`;
 }
 function movieSelectHTML(){
   const opts=data.movies.map(m=>{ const cv=combinedAvg(m); const tag=cv===null?'':`  ·  ${fmt(cv)}★`;
@@ -1080,10 +1128,60 @@ function personPanel(p){
   return detailHTML(p,getMovie(selectedId));
 }
 function libraryHTML(p){
-  const list=visibleMovies();
+  const vis=visibleMovies();
+  const list=vis.filter(m=>personAvg(m,p)!==null);         // rated-by-you only; unrated live on the TBR shelf
+  const tbrCount=vis.filter(m=>personAvg(m,p)===null).length;
   const body=list.length?list.map(m=>summaryCardHTML(m,p)).join('')
-    :`<div class="nomatch">Nothing matches these filters.</div>`;
-  return controlsHTML()+`<div class="lib">${body}</div>`;
+    :`<div class="nomatch">${tbrCount?`Nothing rated yet — ${tbrCount} waiting on your TBR shelf (✦ More → TBR).`:'Nothing matches these filters.'}</div>`;
+  const tbrHint=(list.length&&tbrCount)?`<div class="tbrhint" data-tab="tbr" role="button">⏳ ${tbrCount} to be rated → TBR shelf</div>`:'';
+  return controlsHTML()+`<div class="lib">${body}</div>`+tbrHint;
+}
+function tbrPanel(){
+  const p=currentSlug();
+  if(!data.movies.length) return `<div class="empty"><div class="big">Nothing logged yet</div><div class="small">The club hasn't added<br>anything to rate.</div></div>`;
+  const list=visibleMovies().filter(m=>personAvg(m,p)===null);
+  const intro=`<div class="listintro"><div class="li-h">⏳ To be rated</div><div class="li-p">Everything the club has logged that you haven't scored yet. Tap one to open your scorecard.</div></div>`;
+  const body=list.length?list.map(m=>summaryCardHTML(m,p)).join('')
+    :`<div class="nomatch">You're all caught up — nothing waiting. 🍿</div>`;
+  return intro+controlsHTML()+`<div class="lib">${body}</div>`;
+}
+
+/* ---------- browse (search without committing) ---------- */
+function browseResultsHTML(){
+  if(browseResults===null) return `<div class="nomatch">Search anything — see details, watch the trailer,<br>add it to the list only if it earns it.</div>`;
+  if(browseResults==='loading') return `<div class="nomatch">Searching…</div>`;
+  if(!browseResults.length) return `<div class="nomatch">No matches — try another title.</div>`;
+  const inLib=new Set(data.movies.map(m=>m.tmdbId).filter(Boolean));
+  const onList=new Set((data.watchlist||[]).map(w=>w.tmdbId).filter(Boolean));
+  return browseResults.map(x=>{
+    const status=x.tmdbId&&inLib.has(x.tmdbId)?`<span class="gchip">✓ in library</span>`
+      :x.tmdbId&&onList.has(x.tmdbId)?`<span class="gchip">✓ on the list</span>`
+      :`<button class="mini" data-act="baddlist" data-tmdb="${x.tmdbId||0}" data-ttype="${x.type}" data-title="${esc(x.title)}" data-year="${esc(x.year)}" data-genre="${esc(x.genre)}" data-poster="${esc(x.poster)}">＋ Add to list</button>`;
+    return `<div class="libcard wlcard">
+      ${x.poster?`<img class="libposter" src="${esc(x.poster)}" alt="" loading="lazy" />`:`<div class="libposter ph">🎬</div>`}
+      <div class="libmain"><div class="libtitle">${esc(x.title)}${x.type==='tv'?' <span class="tvbadge">TV</span>':''}</div>
+        <div class="libmeta">${[esc(x.year),esc(x.genre)].filter(Boolean).join(' · ')}</div>
+        <div class="wlacts"><button class="mini" data-act="trailer" data-tmdb="${x.tmdbId||0}" data-ttype="${x.type}" data-title="${esc(x.title)}">▶ Trailer</button>${status}</div>
+      </div></div>`;
+  }).join('');
+}
+function browsePanel(){
+  return `<div class="listintro"><div class="li-h">🔎 Browse</div><div class="li-p">Window-shop films &amp; shows — no commitment. Trailers on tap; add to the list when something looks right.</div></div>
+    <div class="b-filters"><input type="search" id="browseQ" class="bsearch" placeholder="Search films & shows…" value="${esc(browseQ)}" /></div>
+    <div id="browseResults" class="lib">${browseResultsHTML()}</div>`;
+}
+function refreshBrowse(){ const c=document.getElementById('browseResults'); if(c) c.innerHTML=browseResultsHTML(); }
+function runBrowseSearch(q){
+  clearTimeout(browseTimer); browseQ=q;
+  const term=(q||'').trim();
+  if(term.length<2){ browseResults=null; refreshBrowse(); return; }
+  browseResults='loading'; refreshBrowse();
+  browseTimer=setTimeout(async()=>{
+    try{ const r=await fetch(`${SEARCH}?q=${encodeURIComponent(term)}`,{cache:'no-store'});
+      const d=await r.json(); browseResults=Array.isArray(d.results)?d.results:[]; }
+    catch(e){ browseResults=[]; }
+    refreshBrowse();
+  },300);
 }
 function summaryCardHTML(m,p){
   const cv=combinedAvg(m), mine=personAvg(m,p), rec=m.ratings[p].recommend;
@@ -1294,7 +1392,18 @@ function syncToolsHTML(){
 /* ---------- events ---------- */
 function wire(){
   const root=document.getElementById('root');
-  root.querySelectorAll('.tabbtn').forEach(t=>t.addEventListener('click',()=>{activeTab=t.dataset.tab;listView=true;newFormOpen=false;render();window.scrollTo({top:0,behavior:'smooth'});}));
+  root.querySelectorAll('.tabbtn[data-tab], .fan-item[data-tab], .tbrhint[data-tab]').forEach(t=>t.addEventListener('click',()=>{activeTab=t.dataset.tab;listView=true;newFormOpen=false;moreOpen=false;render();window.scrollTo({top:0,behavior:'smooth'});}));
+  root.querySelectorAll('[data-more]').forEach(b=>b.addEventListener('click',()=>{moreOpen=!moreOpen;render();}));
+  root.querySelectorAll('[data-fanclose]').forEach(b=>b.addEventListener('click',()=>{moreOpen=false;render();}));
+  const bq=document.getElementById('browseQ');
+  if(bq) bq.addEventListener('input',()=>runBrowseSearch(bq.value));
+  const br=document.getElementById('browseResults');
+  if(br) br.addEventListener('click',e=>{
+    const t=e.target.closest?e.target.closest('[data-act="trailer"]'):null;
+    if(t){ openTrailer({tmdbId:+t.dataset.tmdb||0,type:t.dataset.ttype,title:t.dataset.title}); return; }
+    const a=e.target.closest?e.target.closest('[data-act="baddlist"]'):null;
+    if(a){ addWatch(a.dataset.title,{type:a.dataset.ttype,year:a.dataset.year,genre:a.dataset.genre,poster:a.dataset.poster,tmdbId:+a.dataset.tmdb||0}); activeTab='browse'; render(); }
+  });
   const sel=document.getElementById('movieSelect');
   if(sel) sel.addEventListener('change',e=>{selectedId=e.target.value;render();});
   const tg=document.getElementById('toggleNew');
@@ -1339,7 +1448,8 @@ function wire(){
   root.querySelectorAll('[data-act="wlvibe"]').forEach(b=>b.addEventListener('click',()=>setWLVibe(b.dataset.id)));
   root.querySelectorAll('[data-act="wlwatched"]').forEach(b=>b.addEventListener('click',()=>watchToLibrary(b.dataset.id)));
   root.querySelectorAll('[data-act="wldel"]').forEach(b=>b.addEventListener('click',()=>delWatch(b.dataset.id)));
-  root.querySelectorAll('[data-act="trailer"]').forEach(b=>b.addEventListener('click',()=>openTrailer({tmdbId:+b.dataset.tmdb||0,type:b.dataset.ttype,title:b.dataset.title})));
+  root.querySelectorAll('[data-act="trailer"]').forEach(b=>{ if(b.closest('#browseResults')) return;   // browse uses delegation (results re-render live)
+    b.addEventListener('click',()=>openTrailer({tmdbId:+b.dataset.tmdb||0,type:b.dataset.ttype,title:b.dataset.title})); });
   root.querySelectorAll('[data-act="loadrecs"]').forEach(b=>b.addEventListener('click',loadRecs));
   root.querySelectorAll('[data-act="addrec"]').forEach(b=>b.addEventListener('click',()=>addRecToList(b.dataset)));
   root.querySelectorAll('[data-act="rename"]').forEach(b=>b.addEventListener('click',()=>renameMovie(b.dataset.id)));
