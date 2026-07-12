@@ -31,6 +31,15 @@
 
 ## 📝 Change Log (Pivots & Decisions)
 
+* **[2026-07-12] — Board grows threads, edits, and reactions (v34).** Posts gain three
+  additive fields (`parentId`, `reacts`, `edited` — normalize backfills; legacy posts
+  untouched). Tap a post (or 💬) to open its one-level reply thread; authors can edit their
+  own posts inline ("· edited" marker; master can still delete anything, but only authors
+  edit their own words); emoji reactions (👍 👎 😂 ❤️ 🔥 😱) toggle per person with names on
+  long-press titles. Deleting a parent cascades its replies (tombstoned). Also fixed a
+  latent bug: the scorecard-notes input binder was grabbing every `textarea.notes` including
+  Board composers — now scoped to `[data-person]`.
+
 * **[2026-07-12] — Duplicate records now auto-combine (v32).** Two phones adding/rating the
   same film near-simultaneously created twin records (id-union sync kept both — the Dunkirk
   bug). `dedupeData()` now runs inside `normalize()`: same `tmdbId` (or exact title+type+year

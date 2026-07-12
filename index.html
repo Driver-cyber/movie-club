@@ -351,6 +351,27 @@
   .post-time{font-family:var(--mono);font-size:9px;color:var(--bone-faint);letter-spacing:0.05em}
   .post-del{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--bone-faint);background:transparent;border:1px solid var(--line);border-radius:7px;padding:4px 9px;cursor:pointer}
   .post-text{font-family:var(--serif);font-size:15.5px;line-height:1.55;color:var(--bone);margin-top:8px;white-space:pre-wrap;word-break:break-word}
+  .post-text.tappable{cursor:pointer}
+
+  /* threads, reactions, editing */
+  .post-foot{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:10px}
+  .reactchip{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--bone-dim);background:var(--ink);
+    border:1px solid var(--line);border-radius:14px;padding:5px 10px;cursor:pointer;min-height:30px}
+  .reactchip.on{color:var(--gold);border-color:var(--gold-dim);background:rgba(224,178,92,0.08)}
+  .reactchip.add{color:var(--bone-faint)}
+  .reactchip.pal{font-size:15px;padding:6px 10px}
+  .reactpal{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;background:var(--ink);border:1px solid var(--line);
+    border-radius:11px;padding:8px}
+  .replybtn{margin-left:auto;font-family:var(--mono);font-size:10.5px;font-weight:600;color:var(--bone-dim);
+    background:transparent;border:1px solid var(--line);border-radius:14px;padding:6px 11px;cursor:pointer;min-height:30px}
+  .replybtn.on{color:var(--gold);border-color:var(--gold-dim)}
+  .replies{margin-top:12px;padding:11px 0 0 11px;border-left:2px solid var(--gold-dim)}
+  .post.replycard{padding:10px 12px;margin-bottom:8px;border-radius:11px}
+  .post.replycard .post-text{font-size:14.5px;margin-top:5px}
+  .replybox{margin-top:4px}
+  .replybox .notes{min-height:64px}
+  .editbox{margin-top:8px;min-height:84px}
+  .editbtns{display:flex;gap:7px;margin-top:8px;justify-content:flex-end}
   .qwho.c{color:var(--rust)} .qwho.j{color:var(--gold)} .qwho.a{color:var(--sage)}
 
   /* rated-by row + read-only scorecard peek */
@@ -509,7 +530,7 @@ const LKEY='movieclub:data';
    device uses it automatically; no join/turn-on flow needed. */
 const DEFAULT_BOX='019f10d7-469f-7e40-972f-962f73fb3a70';
 const SCHEMA_VERSION=1;   // bump when the data shape changes; import normalizes forward
-const APP_VERSION='v33';  // shown in the footer — keep in step with the sw.js cache name
+const APP_VERSION='v34';  // shown in the footer — keep in step with the sw.js cache name
 const CATEGORIES=[
   {key:'plot',               label:'Plot',               desc:'story · structure'},
   {key:'writing',            label:'Writing',            desc:'script · dialogue'},
@@ -549,6 +570,8 @@ let selectedId=null, activeTab='chad', sortMode='recent', newFormOpen=false;
 let genreFilter='all', typeFilter='all', listView=true, membersOpen=false;
 let wlService='all', wlTag='all';
 let postDraft='', postTags=new Set(), boardSearch='', boardMovies=new Set(), boardGeneral=false, boardFiltersOpen=false;
+let threadOpenId='', replyDraft='', editingPostId='', editDraft='', reactOpenId='';
+const REACT_EMOJIS=['👍','👎','😂','❤️','🔥','😱'];
 let raterOpenId='';   // shared row whose "rated by" list is expanded
 let moreOpen=false;   // radial More menu
 let browseQ='', browseResults=null, browseTimer=null;   // Browse screen (null=idle,'loading',array)
@@ -679,6 +702,11 @@ function normalize(){
     if(!PEOPLE[p.author]) p.author='chad';
     if(typeof p.text!=='string') p.text='';
     if(!Array.isArray(p.movieIds)) p.movieIds=[];
+    if(typeof p.parentId!=='string') p.parentId='';
+    if(typeof p.edited!=='boolean') p.edited=false;
+    if(!p.reacts||typeof p.reacts!=='object'||Array.isArray(p.reacts)) p.reacts={};
+    Object.keys(p.reacts).forEach(e=>{ p.reacts[e]=(Array.isArray(p.reacts[e])?p.reacts[e]:[]).filter(s=>PEOPLE[s]);
+      if(!p.reacts[e].length) delete p.reacts[e]; });
     if(typeof p.created!=='number') p.created=0;
     if(typeof p.updated!=='number') p.updated=p.created||0;
   });
@@ -1032,37 +1060,90 @@ function addPost(){
 }
 function delPost(id){
   const p=(data.posts||[]).find(x=>x.id===id); if(!p) return;
-  if(!confirm('Delete this post?')) return;
-  data.posts=data.posts.filter(x=>x.id!==id); (data.deleted=data.deleted||[]).push(id); scheduleSave(); render();
+  const replies=(data.posts||[]).filter(x=>x.parentId===id).map(x=>x.id);
+  if(!confirm(replies.length?`Delete this post and its ${replies.length} repl${replies.length>1?'ies':'y'}?`:'Delete this post?')) return;
+  const dead=new Set([id,...replies]);
+  data.posts=data.posts.filter(x=>!dead.has(x.id)); (data.deleted=data.deleted||[]).push(...dead);
+  if(threadOpenId===id) threadOpenId='';
+  scheduleSave(); render();
 }
+function addReply(parentId){
+  const t=(replyDraft||'').trim(); if(!t){ toast('Write a reply first'); return; }
+  data.posts.unshift({id:'p'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),author:currentSlug(),
+    text:t,movieIds:[],parentId,reacts:{},edited:false,created:Date.now(),updated:Date.now()});
+  replyDraft=''; threadOpenId=parentId; scheduleSave(); render();
+}
+function toggleReact(id,emoji){
+  const p=(data.posts||[]).find(x=>x.id===id); if(!p||!REACT_EMOJIS.includes(emoji)) return;
+  const me=currentSlug(); if(!p.reacts||typeof p.reacts!=='object') p.reacts={};
+  const arr=p.reacts[emoji]||[];
+  p.reacts[emoji]=arr.includes(me)?arr.filter(s=>s!==me):[...arr,me];
+  if(!p.reacts[emoji].length) delete p.reacts[emoji];
+  p.updated=now(); reactOpenId=''; scheduleSave(); render();
+}
+function startEditPost(id){
+  const p=(data.posts||[]).find(x=>x.id===id); if(!p||p.author!==currentSlug()) return;
+  editingPostId=id; editDraft=p.text; reactOpenId=''; render();
+}
+function saveEditPost(id){
+  const p=(data.posts||[]).find(x=>x.id===id); if(!p) return;
+  const t=(editDraft||'').trim(); if(!t){ toast('Post can’t be empty'); return; }
+  if(t!==p.text){ p.text=t; p.edited=true; p.updated=now(); scheduleSave(); }
+  editingPostId=''; editDraft=''; render();
+}
+function replyCountOf(id){ return (data.posts||[]).filter(x=>x.parentId===id).length; }
 function visiblePosts(){
-  let arr=(data.posts||[]).slice().sort((a,b)=>(b.created||0)-(a.created||0));
+  let arr=(data.posts||[]).filter(p=>!p.parentId).sort((a,b)=>(b.created||0)-(a.created||0));
   if(boardMovies.size||boardGeneral){
     arr=arr.filter(p=>{ const ids=p.movieIds||[]; const hit=ids.some(id=>boardMovies.has(id));
       return (boardMovies.size&&hit)||(boardGeneral&&!ids.length); });
   }
   const q=boardSearch.trim().toLowerCase();
   if(q) arr=arr.filter(p=>{ const names=(p.movieIds||[]).map(id=>{const m=getMovie(id);return m?m.title:'';}).join(' ');
-    return (p.text+' '+(PEOPLE[p.author]||'')+' '+names).toLowerCase().includes(q); });
+    const rep=(data.posts||[]).filter(x=>x.parentId===p.id).map(x=>x.text).join(' ');
+    return (p.text+' '+(PEOPLE[p.author]||'')+' '+names+' '+rep).toLowerCase().includes(q); });
   return arr;
 }
 function movieChipCloud(act,activeSet){
   return data.movies.map(m=>`<button class="chip mini-chip ${activeSet.has(m.id)?'on':''}" data-${act}="${m.id}">${esc(m.title)}</button>`).join('');
 }
+function reactRowHTML(p){
+  const me=currentSlug();
+  const chips=REACT_EMOJIS.filter(e=>p.reacts&&p.reacts[e]&&p.reacts[e].length)
+    .map(e=>`<button class="reactchip ${p.reacts[e].includes(me)?'on':''}" data-react="${e}" data-pid="${p.id}" title="${p.reacts[e].map(s=>PEOPLE[s]).join(', ')}">${e} ${p.reacts[e].length}</button>`).join('');
+  const rc=replyCountOf(p.id);
+  const reply=p.parentId?'':`<button class="replybtn ${threadOpenId===p.id?'on':''}" data-thread="${p.id}">💬 ${rc||'Reply'}</button>`;
+  const pal=reactOpenId===p.id?`<div class="reactpal">${REACT_EMOJIS.map(e=>`<button class="reactchip pal" data-react="${e}" data-pid="${p.id}">${e}</button>`).join('')}</div>`:'';
+  return `<div class="post-foot">${chips}<button class="reactchip add" data-reactadd="${p.id}">😀＋</button>${reply}</div>${pal}`;
+}
+function postCardHTML(p,isReply){
+  const me=currentSlug();
+  const canDel=(!viewerMode)||p.author===me, canEdit=p.author===me;
+  const editing=editingPostId===p.id;
+  const body=editing
+    ?`<textarea class="notes editbox" data-editbox="1">${esc(editDraft)}</textarea>
+      <div class="editbtns"><button class="mini" data-saveedit="${p.id}">✓ Save</button><button class="mini" data-canceledit="1">Cancel</button></div>`
+    :`<div class="post-text${p.parentId?'':' tappable'}" ${p.parentId?'':`data-thread="${p.id}"`}>${esc(p.text)}</div>`;
+  const tags=p.parentId?'':(`<div class="gtags" style="margin-top:8px">${(p.movieIds||[]).map(id=>{const m=getMovie(id);return m?`<span class="gchip">${esc(m.title)}</span>`:'';}).join('')||'<span class="gchip empty">general</span>'}</div>`);
+  const thread=(!p.parentId&&threadOpenId===p.id)?threadHTML(p):'';
+  return `<div class="post ${isReply?'replycard':''}"><div class="post-head">
+      <span class="qwho ${authorCls(p.author)}">${esc(PEOPLE[p.author]||'?')}</span>
+      <span class="post-time">${postTime(p.created)}${p.edited?' · edited':''}</span>
+      ${canEdit&&!editing?`<button class="post-del" data-editpost="${p.id}">✎</button>`:''}
+      ${canDel?`<button class="post-del" data-delpost="${p.id}">✕</button>`:''}</div>
+    ${body}${tags}${reactRowHTML(p)}${thread}</div>`;
+}
+function threadHTML(p){
+  const me=currentSlug();
+  const replies=(data.posts||[]).filter(x=>x.parentId===p.id).sort((a,b)=>(a.created||0)-(b.created||0));
+  return `<div class="replies">${replies.map(r=>postCardHTML(r,true)).join('')}
+    <div class="replybox"><textarea class="notes replyta" data-replybox="1" placeholder="Reply as ${esc(PEOPLE[me])}…">${esc(replyDraft)}</textarea>
+    <button class="btn btn-add" data-replysend="${p.id}" style="width:100%;min-height:42px;margin-top:8px">↩ Reply</button></div></div>`;
+}
 function postsHTML(){
-  const me=currentSlug(), list=visiblePosts();
+  const list=visiblePosts();
   if(!list.length) return `<div class="nomatch">${(data.posts||[]).length?'No posts match these filters.':'No posts yet — start the conversation.'}</div>`;
-  return list.map(p=>{
-    const tags=(p.movieIds||[]).map(id=>{const m=getMovie(id);return m?`<span class="gchip">${esc(m.title)}</span>`:'';}).join('')
-      ||'<span class="gchip empty">general</span>';
-    const canDel=(!viewerMode)||p.author===me;
-    return `<div class="post"><div class="post-head">
-        <span class="qwho ${authorCls(p.author)}">${esc(PEOPLE[p.author]||'?')}</span>
-        <span class="post-time">${postTime(p.created)}</span>
-        ${canDel?`<button class="post-del" data-delpost="${p.id}">✕</button>`:''}</div>
-      <div class="post-text">${esc(p.text)}</div>
-      <div class="gtags" style="margin-top:8px">${tags}</div></div>`;
-  }).join('');
+  return list.map(p=>postCardHTML(p,false)).join('');
 }
 function boardPanel(){
   const me=currentSlug();
@@ -1494,7 +1575,7 @@ function wire(){
   });
   root.querySelectorAll('[data-act="clearpred"]').forEach(b=>b.addEventListener('click',()=>{
     const m=getMovie(selectedId); if(!m) return; m.ratings[b.dataset.person][b.dataset.cat]=0; m.ratings[b.dataset.person].updated=now(); scheduleSave(); render(); }));
-  root.querySelectorAll('textarea.notes').forEach(ta=>ta.addEventListener('input',()=>setNotes(selectedId,ta.dataset.person,ta.value)));
+  root.querySelectorAll('textarea.notes[data-person]').forEach(ta=>ta.addEventListener('input',()=>setNotes(selectedId,ta.dataset.person,ta.value)));
   root.querySelectorAll('[data-sort]').forEach(c=>c.addEventListener('click',()=>{sortMode=c.dataset.sort;render();}));
   root.querySelectorAll('[data-act="rate"]').forEach(b=>b.addEventListener('click',()=>{selectedId=b.dataset.id;activeTab=(viewerMode&&VIEWERS[viewerMode]?viewerMode:'chad');listView=false;render();window.scrollTo({top:0,behavior:'smooth'});}));
   root.querySelectorAll('[data-act="open"]').forEach(b=>b.addEventListener('click',()=>openEdit(b.dataset.id)));
@@ -1537,7 +1618,24 @@ function wire(){
     const id=b.dataset.bfm; boardMovies.has(id)?boardMovies.delete(id):boardMovies.add(id); render(); }));
   root.querySelectorAll('[data-act="bfclear"]').forEach(b=>b.addEventListener('click',()=>{boardMovies.clear();boardGeneral=false;boardSearch='';render();}));
   const bpst=document.getElementById('boardPosts');
-  if(bpst) bpst.addEventListener('click',e=>{ const b=e.target.closest?e.target.closest('[data-delpost]'):null; if(b) delPost(b.dataset.delpost); });
+  if(bpst){
+    bpst.addEventListener('click',e=>{
+      const q=s=>e.target.closest?e.target.closest(s):null; let b;
+      if(b=q('[data-delpost]'))   return delPost(b.dataset.delpost);
+      if(b=q('[data-editpost]'))  return startEditPost(b.dataset.editpost);
+      if(b=q('[data-saveedit]'))  return saveEditPost(b.dataset.saveedit);
+      if(b=q('[data-canceledit]')){ editingPostId=''; editDraft=''; return render(); }
+      if(b=q('[data-react]'))     return toggleReact(b.dataset.pid,b.dataset.react);
+      if(b=q('[data-reactadd]')){ reactOpenId=(reactOpenId===b.dataset.reactadd)?'':b.dataset.reactadd; return render(); }
+      if(b=q('[data-replysend]')) return addReply(b.dataset.replysend);
+      if(b=q('[data-thread]')){ const id=b.dataset.thread;
+        threadOpenId=(threadOpenId===id)?'':id; replyDraft=''; editingPostId=''; return render(); }
+    });
+    bpst.addEventListener('input',e=>{
+      if(e.target.dataset&&e.target.dataset.replybox) replyDraft=e.target.value;
+      if(e.target.dataset&&e.target.dataset.editbox) editDraft=e.target.value;
+    });
+  }
   root.querySelectorAll('[data-act="memcopy"]').forEach(b=>b.addEventListener('click',()=>copyLink(b.dataset.link,`${b.dataset.name}'s link copied — send it over`)));
   root.querySelectorAll('[data-act="viewexit"]').forEach(b=>b.addEventListener('click',()=>{
     viewerMode=''; try{ localStorage.removeItem(VKEY); }catch(e){} activeTab='chad'; render(); }));
