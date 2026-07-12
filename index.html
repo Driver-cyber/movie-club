@@ -509,7 +509,7 @@ const LKEY='movieclub:data';
    device uses it automatically; no join/turn-on flow needed. */
 const DEFAULT_BOX='019f10d7-469f-7e40-972f-962f73fb3a70';
 const SCHEMA_VERSION=1;   // bump when the data shape changes; import normalizes forward
-const APP_VERSION='v31';  // shown in the footer — keep in step with the sw.js cache name
+const APP_VERSION='v32';  // shown in the footer — keep in step with the sw.js cache name
 const CATEGORIES=[
   {key:'plot',               label:'Plot',               desc:'story · structure'},
   {key:'writing',            label:'Writing',            desc:'script · dialogue'},
@@ -683,6 +683,58 @@ function normalize(){
     if(typeof p.updated!=='number') p.updated=p.created||0;
   });
   if(!Array.isArray(data.deleted)) data.deleted=[];
+  dedupeData();
+}
+
+/* ---------- duplicate combining ----------
+   Two phones adding/rating the same film near-simultaneously create two
+   records with different ids; id-union sync keeps both. Here we combine them:
+   same tmdbId (or exact title+type+year when untagged) = same movie. The
+   keeper is deterministic (earliest created, then lowest id) so every device
+   converges; per-person ratings merge newest-wins so nobody's scores are lost;
+   absorbed ids are tombstoned and Board tags remapped. */
+function movieKey(x){ return x.tmdbId?`t:${x.type||'movie'}:${x.tmdbId}`
+  :`n:${x.type||'movie'}:${(x.title||'').trim().toLowerCase()}:${(x.year||'').trim()}`; }
+function absorbMovie(keep,dup){
+  Object.keys(PEOPLE).forEach(p=>{ keep.ratings[p]=mergePerson(keep.ratings&&keep.ratings[p],dup.ratings&&dup.ratings[p])||blankPerson(); });
+  keep.guests=mergeGuests(keep.guests,dup.guests);
+  ['poster','genre','year','watched'].forEach(k=>{ if(!keep[k]&&dup[k]) keep[k]=dup[k]; });
+  if(!keep.tmdbId&&dup.tmdbId) keep.tmdbId=dup.tmdbId;
+  keep.fav=keep.fav||dup.fav;
+  keep.created=Math.min(keep.created||0,dup.created||0);
+  keep.updated=Math.max(keep.updated||0,dup.updated||0);
+}
+function dedupeData(){
+  const seen=new Map(), drop=new Set();
+  data.movies.forEach(m=>{ const k=movieKey(m); if(!(m.title||'').trim()) return;
+    const e=seen.get(k);
+    if(!e){ seen.set(k,m); return; }
+    let keep=e,dup=m;
+    if((m.created||0)<(e.created||0)||((m.created||0)===(e.created||0)&&m.id<e.id)){ keep=m; dup=e; seen.set(k,m); }
+    absorbMovie(keep,dup); drop.add(dup.id);
+    (data.posts||[]).forEach(p=>{ p.movieIds=[...new Set((p.movieIds||[]).map(id=>id===dup.id?keep.id:id))]; });
+    if(selectedId===dup.id) selectedId=keep.id;
+  });
+  if(drop.size){ data.movies=data.movies.filter(m=>!drop.has(m.id)); data.deleted=[...(data.deleted||[]),...drop]; }
+  const wseen=new Map(), wdrop=new Set();
+  (data.watchlist||[]).forEach(w=>{ const k=movieKey(w)+':'+(w.by||'cj'); if(!(w.title||'').trim()) return;
+    const e=wseen.get(k);
+    if(!e){ wseen.set(k,w); return; }
+    let keep=e,dup=w;
+    if((w.created||0)<(e.created||0)||((w.created||0)===(e.created||0)&&w.id<e.id)){ keep=w; dup=e; wseen.set(k,w); }
+    ['poster','genre','year','service','vibe'].forEach(f=>{ if(!keep[f]&&dup[f]) keep[f]=dup[f]; });
+    if(!keep.tmdbId&&dup.tmdbId) keep.tmdbId=dup.tmdbId;
+    keep.updated=Math.max(keep.updated||0,dup.updated||0); wdrop.add(dup.id);
+  });
+  if(wdrop.size){ data.watchlist=data.watchlist.filter(w=>!wdrop.has(w.id)); data.deleted=[...(data.deleted||[]),...wdrop]; }
+}
+/* interactive match for add-time guards: year-flexible so a manual add without
+   a year still finds the tagged copy (never used for automatic merging) */
+function sameMovie(a,b){
+  if(a.tmdbId&&b.tmdbId) return a.tmdbId===b.tmdbId&&(a.type||'movie')===(b.type||'movie');
+  return (a.title||'').trim().toLowerCase()===(b.title||'').trim().toLowerCase()
+    &&(a.type||'movie')===(b.type||'movie')
+    &&(!a.year||!b.year||a.year===b.year);
 }
 /* ---------- sync merge (so two phones don't clobber each other) ---------- */
 function mergePerson(a,b){ if(!a) return b; if(!b) return a; return ((a.updated||0)>=(b.updated||0))?a:b; }
@@ -719,6 +771,12 @@ function esc(s){ return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>
 /* ---------- mutations ---------- */
 function addMovie(title,date,extra){ const t=(title||'').trim(); if(!t) return;
   const e=extra||{};
+  const probe={title:t,type:(e.type==='tv'?'tv':'movie'),tmdbId:e.tmdbId||0,year:e.year||''};
+  const existing=data.movies.find(x=>sameMovie(x,probe));
+  if(existing){ // already in the club library — open it instead of duplicating
+    newFormOpen=false; pendingPick=null; pendingCover=null; pendingType='movie';
+    selectedId=existing.id; listView=false; activeTab=(viewerMode&&VIEWERS[viewerMode])?viewerMode:'chad';
+    render(); window.scrollTo({top:0,behavior:'smooth'}); toast('Already in the club library — opening it'); return; }
   const m={id:uid(),title:t,type:(e.type==='tv'?'tv':'movie'),tmdbId:e.tmdbId||0,watched:date||'',year:e.year||'',genre:e.genre||'',poster:e.poster||'',fav:false,created:Date.now(),updated:Date.now(),includeGuests:false,ratings:blank(),guests:[]};
   data.movies.unshift(m); selectedId=m.id; newFormOpen=false; listView=false; pendingPick=null; pendingCover=null; pendingType='movie'; scheduleSave(); render(); window.scrollTo({top:0,behavior:'smooth'}); }
 function toggleFav(id){ const m=getMovie(id); if(!m) return;
@@ -879,6 +937,10 @@ function recsSectionHTML(){
 
 /* ---------- watch list (shared, to-watch) ---------- */
 function addWatch(title,extra){ const t=(title||'').trim(); if(!t) return; const e=extra||{};
+  const probe={title:t,type:(e.type==='tv'?'tv':'movie'),tmdbId:e.tmdbId||0,year:e.year||''};
+  if(data.movies.some(x=>sameMovie(x,probe))){ toast('Already in the club library'); return; }
+  const myBy=(viewerMode&&MEMBERS[viewerMode])?viewerMode:'cj';
+  if((data.watchlist||[]).some(w=>(w.by||'cj')===myBy&&sameMovie(w,probe))){ toast('Already on the list'); return; }
   const w={id:'w'+Date.now().toString(36)+Math.random().toString(36).slice(2,4),title:t,type:(e.type==='tv'?'tv':'movie'),tmdbId:e.tmdbId||0,year:e.year||'',genre:e.genre||'',poster:e.poster||'',service:'',vibe:'',by:(viewerMode&&MEMBERS[viewerMode]?viewerMode:'cj'),created:Date.now(),updated:Date.now()};
   if(!Array.isArray(data.watchlist)) data.watchlist=[];
   data.watchlist.unshift(w); newFormOpen=false; pendingPick=null; pendingCover=null; pendingType='movie'; scheduleSave(); render(); toast('Added to your list'); }

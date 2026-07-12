@@ -31,6 +31,17 @@
 
 ## 📝 Change Log (Pivots & Decisions)
 
+* **[2026-07-12] — Duplicate records now auto-combine (v32).** Two phones adding/rating the
+  same film near-simultaneously created twin records (id-union sync kept both — the Dunkirk
+  bug). `dedupeData()` now runs inside `normalize()`: same `tmdbId` (or exact title+type+year
+  when untagged) = same movie. Keeper is deterministic (earliest `created`, then lowest id) so
+  all devices converge; per-person ratings merge newest-wins so nobody's scores are lost;
+  blanks refill from the absorbed copy; Board tags remap; absorbed ids are tombstoned.
+  Different years never auto-merge (remake safety). Add-time guards open the existing record
+  instead of duplicating (library + watch lists, per-list scoped). Verified against the live
+  bug's shape in headless Chromium. Founding docs committed the same day ("Add founding
+  docs", verbatim).
+
 * **[2026-07-11] — Founding docs written retroactively.** The app was already live and had
   outgrown its README. This session excavated the real architecture and set direction. Key
   outcomes:

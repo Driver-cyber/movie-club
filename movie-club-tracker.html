@@ -46,7 +46,7 @@
   <header>
     <h1>Movie Club 🎬</h1>
     <div class="desc">Chad &amp; Joelle's private movie club — friends welcome. Live on Cloudflare Pages.</div>
-    <div class="updated">Updated 2026-07-11</div>
+    <div class="updated">Updated 2026-07-12</div>
   </header>
 
   <div class="col">
@@ -72,8 +72,8 @@
     <div class="prio">
       <div class="badge">3</div>
       <div>
-        <div class="prio-title">Commit the founding docs as source of truth</div>
-        <div class="prio-note">CLAUDE.md + DECISIONS.md + this tracker into the repo. Single commit: "Add founding docs."</div>
+        <div class="prio-title">✓ Done — founding docs committed; duplicate records auto-combine (v32)</div>
+        <div class="prio-note">Founding docs landed 2026-07-12. Same-movie twins now merge on sync (ratings preserved, tombstoned, deterministic keeper) with add-time guards.</div>
       </div>
     </div>
 
@@ -93,7 +93,7 @@
 {
   "project": "Movie Club",
   "description": "Chad & Joelle's private movie & TV rating club, friends welcome. Live on Cloudflare Pages.",
-  "updated": "2026-07-11",
+  "updated": "2026-07-12",
   "columns": [
     {
       "name": "Movie Club",
@@ -101,7 +101,7 @@
       "priorities": [
         { "title": "Add a club-wide verdict alongside the couple verdict", "note": "Couple verdict stays the anchor; club verdict is additive. Keep schema-safe (normalize + SCHEMA_VERSION), test against legacy data." },
         { "title": "Reconcile the stale README with reality", "note": "README says two-person/jsonblob-first; reality is multi-user hub-and-spoke, KV-primary. Doc fix." },
-        { "title": "Commit the founding docs as source of truth", "note": "CLAUDE.md + DECISIONS.md + tracker into the repo in one commit." }
+        { "title": "DONE 2026-07-12: founding docs committed; duplicate-record auto-combine shipped (v32)", "note": "Same-movie twins merge on sync with ratings preserved; add-time guards prevent new twins." }
       ],
       "backlog": [
         "Club-verdict definition — who counts toward it? (design decision before build)",
