@@ -31,6 +31,15 @@
 
 ## 📝 Change Log (Pivots & Decisions)
 
+* **[2026-07-12] — Club view: see everyone's take without rating first (v35).** Tapping a
+  movie on Shared opens a club-view modal — Shared + All verdicts side by side, every rater
+  as a tappable meter (drill into their full scorecard, with back), everyone's
+  predictability/recommends/notes, plus Trailer and Open & rate. New additive `addedBy`
+  field records who logged each title ("added by Alex A." on rows/modal; backfilled empty
+  for legacy). TBR/personal cards now show "All x.x · N rated" when members have rated, and
+  unrated Shared rows say "not rated yet · tap to peek" instead of looking dead. Fixes the
+  "member added Euphoria and nobody could tell" discovery gap.
+
 * **[2026-07-12] — Board grows threads, edits, and reactions (v34).** Posts gain three
   additive fields (`parentId`, `reacts`, `edited` — normalize backfills; legacy posts
   untouched). Tap a post (or 💬) to open its one-level reply thread; authors can edit their

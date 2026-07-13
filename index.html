@@ -399,6 +399,25 @@
   .rv-notes{margin-top:13px;background:var(--ink);border:1px solid var(--line);border-radius:10px;padding:11px 12px;
     font-family:var(--serif);font-size:14.5px;line-height:1.5;color:var(--bone)}
   .rv-nlbl{font-family:var(--mono);font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--bone-dim);margin-bottom:6px}
+  .rv-back{font-family:var(--mono);font-size:10px;letter-spacing:0.08em;color:var(--bone-dim);background:transparent;
+    border:1px solid var(--line);border-radius:14px;padding:7px 12px;cursor:pointer;margin-bottom:12px}
+
+  /* movie club-view modal */
+  .mvopen{display:flex;gap:12px;align-items:flex-start;flex:1;min-width:0;background:transparent;border:none;
+    padding:0;margin:0;text-align:left;cursor:pointer;color:inherit;font:inherit}
+  .mv-verdicts{display:flex;gap:26px;align-items:flex-end;padding:12px 0 14px;border-top:1px solid var(--line);margin-top:4px}
+  .mv-verdicts .vnum{font-family:var(--serif);font-style:italic;font-weight:600;font-size:32px;color:var(--gold);line-height:1}
+  .mv-verdicts .vnum.empty{color:var(--bone-faint);font-size:24px}
+  .mv-verdicts .vlbl{font-family:var(--mono);font-size:8.5px;letter-spacing:0.16em;text-transform:uppercase;color:var(--bone-faint);text-align:left;margin-top:5px}
+  .mv-raters{display:flex;flex-direction:column;gap:7px}
+  .mv-rater{display:flex;align-items:center;gap:9px;width:100%;background:var(--ink);border:1px solid var(--line);
+    border-radius:10px;padding:9px 11px;cursor:pointer;font:inherit;color:inherit}
+  .mv-rater .who{font-family:var(--mono);font-size:10px;letter-spacing:0.1em;text-transform:uppercase;width:52px;
+    text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+  .mv-rater .pnum{font-family:var(--mono);font-size:12px;font-weight:600;width:28px;text-align:right}
+  .mv-go{font-family:var(--serif);color:var(--bone-faint);font-size:16px}
+  .mv-rater:active{border-color:var(--line-strong)}
+  .mv-actions{display:flex;gap:8px;margin-top:14px;justify-content:flex-end}
 
   /* recommendations */
   .recsbar{margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
@@ -530,7 +549,7 @@ const LKEY='movieclub:data';
    device uses it automatically; no join/turn-on flow needed. */
 const DEFAULT_BOX='019f10d7-469f-7e40-972f-962f73fb3a70';
 const SCHEMA_VERSION=1;   // bump when the data shape changes; import normalizes forward
-const APP_VERSION='v34';  // shown in the footer — keep in step with the sw.js cache name
+const APP_VERSION='v35';  // shown in the footer — keep in step with the sw.js cache name
 const CATEGORIES=[
   {key:'plot',               label:'Plot',               desc:'story · structure'},
   {key:'writing',            label:'Writing',            desc:'script · dialogue'},
@@ -667,6 +686,7 @@ function normalize(){
     if(typeof m.created!=='number') m.created=0;
     if(typeof m.updated!=='number') m.updated=m.created||0;
     if(typeof m.includeGuests!=='boolean') m.includeGuests=false;
+    if(typeof m.addedBy!=='string'||!PEOPLE[m.addedBy]) m.addedBy='';
     if(!m.ratings||typeof m.ratings!=='object') m.ratings=blank();
     Object.keys(PEOPLE).forEach(p=>{
       const r=m.ratings[p]||(m.ratings[p]=blankPerson());
@@ -805,7 +825,7 @@ function addMovie(title,date,extra){ const t=(title||'').trim(); if(!t) return;
     newFormOpen=false; pendingPick=null; pendingCover=null; pendingType='movie';
     selectedId=existing.id; listView=false; activeTab=(viewerMode&&VIEWERS[viewerMode])?viewerMode:'chad';
     render(); window.scrollTo({top:0,behavior:'smooth'}); toast('Already in the club library — opening it'); return; }
-  const m={id:uid(),title:t,type:(e.type==='tv'?'tv':'movie'),tmdbId:e.tmdbId||0,watched:date||'',year:e.year||'',genre:e.genre||'',poster:e.poster||'',fav:false,created:Date.now(),updated:Date.now(),includeGuests:false,ratings:blank(),guests:[]};
+  const m={id:uid(),title:t,type:(e.type==='tv'?'tv':'movie'),tmdbId:e.tmdbId||0,watched:date||'',year:e.year||'',genre:e.genre||'',poster:e.poster||'',fav:false,addedBy:currentSlug(),created:Date.now(),updated:Date.now(),includeGuests:false,ratings:blank(),guests:[]};
   data.movies.unshift(m); selectedId=m.id; newFormOpen=false; listView=false; pendingPick=null; pendingCover=null; pendingType='movie'; scheduleSave(); render(); window.scrollTo({top:0,behavior:'smooth'}); }
 function toggleFav(id){ const m=getMovie(id); if(!m) return;
   if(!m.fav && favCount()>=MAX_FAV){ toast(`Top ${MAX_FAV} is full — unheart one first`); return; }
@@ -1025,7 +1045,7 @@ function listPanel(){
 }
 
 /* ---------- read-only scorecard peek (tap a rater's name) ---------- */
-function openRatingView(mid,p){
+function openRatingView(mid,p,fromMovie){
   const m=getMovie(mid); if(!m||!PEOPLE[p]) return;
   const r=m.ratings[p]||blankPerson(); const avg=personAvg(m,p);
   const rows=CATEGORIES.map(c=>{ const v=r[c.key]||0;
@@ -1035,6 +1055,7 @@ function openRatingView(mid,p){
   const el=document.getElementById('rview'); if(!el) return;
   el.innerHTML=`<div class="tr-back" data-act="rvclose"></div>
     <div class="rv-box"><button class="tr-x" data-act="rvclose">✕</button>
+      ${fromMovie?`<button class="rv-back" data-act="rvback">‹ All raters</button>`:''}
       <div class="rv-head">${m.poster?`<img class="rv-poster" src="${esc(m.poster)}" alt="" />`:''}
         <div><div class="rv-title">${esc(m.title)}</div>
         <div class="rv-sub"><span class="qwho ${authorCls(p)}">${esc(PEOPLE[p])}</span>${avg!==null?` · avg ${fmt(avg)}/5`:' · not rated yet'}${rec}</div></div></div>
@@ -1043,6 +1064,52 @@ function openRatingView(mid,p){
     </div>`;
   el.classList.add('show'); lockScroll();
   el.querySelectorAll('[data-act="rvclose"]').forEach(b=>b.addEventListener('click',closeRatingView));
+  el.querySelectorAll('[data-act="rvback"]').forEach(b=>b.addEventListener('click',()=>openMovieView(mid)));
+}
+/* the club view: tap a movie on Shared to see everyone's take at once */
+function openMovieView(mid){
+  const m=getMovie(mid); if(!m) return;
+  const rl=raters(m), cv=combinedAvg(m), av=allAvg(m);
+  const meterCls=p=>p==='chad'?'chad':p==='joelle'?'joelle':'mem';
+  const rows=rl.length?rl.map(p=>{ const v=personAvg(m,p);
+    return `<button class="mv-rater" data-mvp="${p}">
+      <span class="who ${authorCls(p)}" title="${esc(PEOPLE[p])}">${esc(firstName(PEOPLE[p]))}</span>
+      <span class="meter"><span class="${meterCls(p)}" style="width:${v/5*100}%"></span></span>
+      <span class="pnum">${fmt(v)}</span><span class="mv-go">›</span></button>`; }).join('')
+    :`<div class="nomatch" style="padding:12px 0">No ratings yet — be the first.</div>`;
+  const preds=Object.keys(PEOPLE).filter(p=>m.ratings[p]&&m.ratings[p].predictability)
+    .map(p=>`${esc(firstName(PEOPLE[p]))} <b>${PRED_WORDS[m.ratings[p].predictability]}</b>`).join('  ·  ');
+  const recs=Object.keys(PEOPLE).filter(p=>m.ratings[p]&&(m.ratings[p].recommend===true||m.ratings[p].recommend===false))
+    .map(p=>`${esc(firstName(PEOPLE[p]))} ${m.ratings[p].recommend?'👍':'👎'}`).join('  ·  ');
+  const notes=Object.keys(PEOPLE).filter(p=>m.ratings[p]&&(m.ratings[p].notes||'').trim())
+    .map(p=>`<div class="qnote"><div class="qwho ${authorCls(p)}">${esc(PEOPLE[p])}</div><div class="qtext">${esc(m.ratings[p].notes)}</div></div>`).join('');
+  const meta=[esc(m.year), m.type==='tv'?'TV':'', esc(m.genre), m.watched?`watched ${esc(m.watched)}`:'',
+    m.addedBy&&PEOPLE[m.addedBy]?`added by ${esc(PEOPLE[m.addedBy])}`:''].filter(Boolean).join(' · ');
+  const el=document.getElementById('rview'); if(!el) return;
+  el.innerHTML=`<div class="tr-back" data-act="rvclose"></div>
+    <div class="rv-box"><button class="tr-x" data-act="rvclose">✕</button>
+      <div class="rv-head">${m.poster?`<img class="rv-poster" src="${esc(m.poster)}" alt="" />`:''}
+        <div><div class="rv-title">${m.fav?'<span class="favmark">♥</span> ':''}${esc(m.title)}</div>
+        <div class="rv-sub">${meta}</div></div></div>
+      <div class="mv-verdicts">
+        <div><div class="vnum ${cv===null?'empty':''}">${fmt(cv)}</div><div class="vlbl">Shared verdict</div></div>
+        <div><div class="vnum ${av===null?'empty':''}" style="color:var(--bone)">${fmt(av)}</div><div class="vlbl">All · ${rl.length} rater${rl.length===1?'':'s'}</div></div>
+      </div>
+      <div class="rv-nlbl" style="margin:4px 0 8px">Ratings — tap a name for their full scorecard</div>
+      <div class="mv-raters">${rows}</div>
+      ${preds?`<div class="predline" style="margin-top:11px"><span class="pl-k">Predictability</span>${preds}</div>`:''}
+      ${recs?`<div class="predline"><span class="pl-k">Recommend</span>${recs}</div>`:''}
+      ${notes?`<div class="twonotes" style="margin-top:11px">${notes}</div>`:''}
+      <div class="mv-actions">
+        <button class="mini" data-act="mvtrailer">▶ Trailer</button>
+        <button class="mini" data-act="mvrate">✎ Open &amp; rate</button>
+      </div>
+    </div>`;
+  el.classList.add('show'); lockScroll();
+  el.querySelectorAll('[data-act="rvclose"]').forEach(b=>b.addEventListener('click',closeRatingView));
+  el.querySelectorAll('[data-mvp]').forEach(b=>b.addEventListener('click',()=>openRatingView(mid,b.dataset.mvp,true)));
+  el.querySelectorAll('[data-act="mvtrailer"]').forEach(b=>b.addEventListener('click',()=>{ closeRatingView(); openTrailer({tmdbId:m.tmdbId||0,type:m.type,title:m.title}); }));
+  el.querySelectorAll('[data-act="mvrate"]').forEach(b=>b.addEventListener('click',()=>{ closeRatingView(); openEdit(mid); }));
 }
 function closeRatingView(){ const el=document.getElementById('rview'); if(!el) return;
   el.classList.remove('show'); el.innerHTML=''; unlockScroll(); }
@@ -1329,8 +1396,11 @@ function runBrowseSearch(q){
 function summaryCardHTML(m,p){
   const cv=combinedAvg(m), mine=personAvg(m,p), rec=m.ratings[p].recommend;
   const metaBits=[m.year&&esc(m.year), m.watched&&('seen '+esc(m.watched))].filter(Boolean).join(' · ');
+  const rl=raters(m), av=allAvg(m);
+  const memberRated=rl.some(x=>MEMBERS[x]);
   const status=(mine===null?`<span class="tbr">TBR · to rate</span>`:'')
-    +(cv!==null?`<span class="mine">Verdict ${fmt(cv)}</span>`:'');
+    +(cv!==null?`<span class="mine">Verdict ${fmt(cv)}</span>`:'')
+    +(memberRated?`<span class="mine">All ${fmt(av)} · ${rl.length} rated</span>`:'');
   const recIco=rec===true?'<span class="recyes">👍</span>':rec===false?'<span class="recno">👎</span>':'';
   return `<button class="libcard" data-act="open" data-id="${m.id}">
     ${posterHTML(m,'libposter','🎬')}
@@ -1397,8 +1467,10 @@ function sharedPanel(){
     if(jn) noteItems.push({who:'Joelle',cls:'j',text:jn});
     Object.keys(MEMBERS).forEach(s=>{ const r=m.ratings[s]; const t=r?(r.notes||'').trim():''; if(t) noteItems.push({who:PEOPLE[s],cls:'a',text:t}); });
     const notes=noteItems.length?`<div class="twonotes">${noteItems.map(it=>`<div class="qnote"><div class="qwho ${it.cls}">${esc(it.who)}</div><div class="qtext">${esc(it.text)}</div></div>`).join('')}</div>`:'';
-    return `<div class="filmrow"><div class="filmrow-head">${m.poster?posterHTML(m,'frposter',''):''}
-      <div class="frmain"><div class="ftitle">${m.fav?'<span class="favmark">♥</span> ':''}${esc(m.title)}</div>${(m.year||m.watched)?`<div class="fdate">${m.year?esc(m.year):''}${m.year&&m.watched?' · ':''}${m.watched?`watched ${esc(m.watched)}`:''}</div>`:''}<div class="gtags">${typeBadge(m)}${m.genre?`<span class="gchip">${esc(m.genre)}</span>`:''}</div></div>
+    const addedBy=m.addedBy&&MEMBERS[m.addedBy]?`added by ${esc(PEOPLE[m.addedBy])}`:'';
+    const dateBits=[m.year?esc(m.year):'',m.watched?`watched ${esc(m.watched)}`:'',addedBy].filter(Boolean).join(' · ');
+    return `<div class="filmrow"><div class="filmrow-head"><button class="mvopen" data-act="mview" data-id="${m.id}">${m.poster?posterHTML(m,'frposter',''):''}
+      <div class="frmain"><div class="ftitle">${m.fav?'<span class="favmark">♥</span> ':''}${esc(m.title)}</div>${dateBits?`<div class="fdate">${dateBits}</div>`:''}<div class="gtags">${typeBadge(m)}${m.genre?`<span class="gchip">${esc(m.genre)}</span>`:''}${rl.length===0?'<span class="gchip empty">not rated yet · tap to peek</span>':''}</div></div></button>
       <div class="verdict"><div class="vnum ${cv===null?'empty':''}">${fmt(cv)}</div><div class="vlbl">Shared verdict</div>${rl.length?`<button class="vtoggle ${raterOpenId===m.id?'on':''}" data-act="raters" data-id="${m.id}">All ${fmt(av)} · ${rl.length} rater${rl.length>1?'s':''} ${raterOpenId===m.id?'▴':'▾'}</button>`:''}</div></div>
       ${raterOpenId===m.id?`<div class="raterrow"><span class="rr-lbl">Rated by</span>${rl.map(p=>`<button class="raterchip" data-act="rview" data-id="${m.id}" data-person="${p}"><span class="qwho ${authorCls(p)}">${esc(firstName(PEOPLE[p]))}</span> ${fmt(personAvg(m,p))}</button>`).join('')}</div>`:''}
       <div class="scorebars">
@@ -1640,6 +1712,7 @@ function wire(){
   root.querySelectorAll('[data-act="viewexit"]').forEach(b=>b.addEventListener('click',()=>{
     viewerMode=''; try{ localStorage.removeItem(VKEY); }catch(e){} activeTab='chad'; render(); }));
   root.querySelectorAll('[data-act="raters"]').forEach(b=>b.addEventListener('click',()=>{raterOpenId=(raterOpenId===b.dataset.id)?'':b.dataset.id;render();}));
+  root.querySelectorAll('[data-act="mview"]').forEach(b=>b.addEventListener('click',()=>openMovieView(b.dataset.id)));
   root.querySelectorAll('[data-act="rview"]').forEach(b=>b.addEventListener('click',()=>openRatingView(b.dataset.id,b.dataset.person)));
   root.querySelectorAll('[data-act="delete"]').forEach(b=>b.addEventListener('click',()=>deleteMovie(b.dataset.id)));
 }
